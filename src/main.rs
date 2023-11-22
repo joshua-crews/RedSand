@@ -1,36 +1,42 @@
 mod setup;
+mod skybox;
+mod camera;
 
 use bevy::prelude::*;
+use bevy_mod_raycast::prelude::*;
+use camera::ThirdPersonCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_systems(Startup, setup::setup)
-        .add_systems(Update, draw_cursor)
+        .add_plugins((
+            DefaultPlugins.set(bevy_mod_raycast::low_latency_window_plugin()),
+            ThirdPersonCameraPlugin,
+            DefaultRaycastingPlugin
+        ))
+        .add_systems(Startup, (skybox::build_skybox, setup::setup))
+        .add_systems(
+            Update,
+            (
+                skybox::cycle_cubemap_asset,
+                skybox::asset_loaded.after(skybox::cycle_cubemap_asset),
+                close_on_esc,
+            ),
+        )
         .run();
 }
 
-fn draw_cursor(
-    camera_query: Query<(&Camera, &GlobalTransform)>,
-    ground_query: Query<&GlobalTransform, With<setup::Ground>>,
-    windows: Query<&Window>,
-    mut gizmos: Gizmos,
+pub fn close_on_esc(
+    mut commands: Commands,
+    focused_windows: Query<(Entity, &Window)>,
+    input: Res<Input<KeyCode>>,
 ) {
-    let (camera, camera_transform) = camera_query.single();
-    let ground = ground_query.single();
+    for (window, focus) in focused_windows.iter() {
+        if !focus.focused {
+            continue;
+        }
 
-    let Some(cursor_position) = windows.single().cursor_position() else {
-        return;
-    };
-
-    let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
-        return;
-    };
-
-    let Some(distance) = ray.intersect_plane(ground.translation(), ground.up()) else {
-        return;
-    };
-    let point = ray.get_point(distance);
-
-    gizmos.circle(point + ground.up() * 0.01, ground.up(), 0.2, Color::WHITE);
+        if input.just_pressed(KeyCode::Escape) {
+            commands.entity(window).despawn();
+        }
+    }
 }

@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use crate::camera;
+use crate::skybox;
 
 #[derive(Component)]
 pub struct Ground;
@@ -7,35 +9,45 @@ pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>
 ) {
-    commands.spawn((
+    let planet = (
         PbrBundle {
-            mesh: meshes.add(shape::Plane::from_size(20.).into()),
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-            ..default()
+            mesh: meshes.add(shape::UVSphere::default().into()),
+            /*material: materials.add(StandardMaterial {
+                base_color_texture: Some(asset_server.load("textures/sample_mars.png")),
+                ..default()
+            }),*/
+            material: materials.add(Color::GRAY.into()),
+            ..Default::default()
         },
-        Ground,
-    ));
-
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb_u8(124, 144, 255).into()),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        ..default()
-    });
-
+        camera::ThirdPersonCameraTarget,
+    );
+    commands.spawn(planet);
     commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 2500.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(8.0, 8.0, 4.0),
-        ..default()
+        transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
+        ..Default::default()
     });
 
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(15.0, 5.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
+    let skybox_handle = asset_server.load(skybox::CUBEMAPS[0].0);
+    let camera = (
+        Camera3dBundle {
+            transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..default()
+        },
+        camera::ThirdPersonCamera::default(),
+        bevy::core_pipeline::Skybox(skybox_handle.clone()),
+    );
+    commands.spawn(camera);
+
+    commands.insert_resource(AmbientLight {
+        color: Color::rgb_u8(210, 220, 240),
+        brightness: 1.0,
+    });
+
+    commands.insert_resource(skybox::Cubemap {
+        is_loaded: false,
+        index: 0,
+        image_handle: skybox_handle,
     });
 }
