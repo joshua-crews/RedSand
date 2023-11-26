@@ -5,6 +5,7 @@ use bevy::{
     prelude::*,
     window::PrimaryWindow,
 };
+use bevy::ecs::query::QuerySingleError;
 use bevy_mod_raycast::prelude::*;
 
 use crate::{camera};
@@ -74,16 +75,25 @@ pub fn orbit_mouse(
     mut cam_velocity: ResMut<CamVelocity>,
     found_planet: Res<CursorOverPlanet>,
 ) {
-    let mut rotation: Vec2 = Vec2::ZERO;
-    let Ok((mut cam, mut cam_transform)) = cam_q.get_single_mut() else { return };
+    let rotation: Vec2;
+    let Ok((mut cam, mut cam_transform)):
+        Result<(&ThirdPersonCamera, Mut<Transform>), QuerySingleError> =
+        cam_q.get_single_mut() else { return };
+    let mut position: Vec2 = Vec2::new(0.0, 0.0);
     for ev in mouse_evr.read() {
         if orbit_condition(cam, &mouse, &found_planet) {
             cam_velocity.0 = ev.delta * cam.mouse_sensitivity;
         }
+        position = ev.delta * cam.mouse_sensitivity;
     }
 
-    rotation = cam_velocity.0;
-    cam_velocity.0 *= cam.inertia;
+    if !orbit_condition(cam, &mouse, &found_planet) {
+        rotation = cam_velocity.0;
+        cam_velocity.0 *= cam.inertia;
+    } else {
+        rotation = position;
+        cam_velocity.0 = position;
+    }
 
     if rotation.length_squared() > 0.0 {
         let window = window_q.get_single().unwrap();

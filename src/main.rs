@@ -1,8 +1,12 @@
 mod setup;
 mod skybox;
 mod camera;
+mod planet;
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    pbr::wireframe::WireframePlugin
+};
 use bevy_mod_raycast::prelude::*;
 use camera::ThirdPersonCameraPlugin;
 
@@ -11,7 +15,8 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(bevy_mod_raycast::low_latency_window_plugin()),
             ThirdPersonCameraPlugin,
-            DefaultRaycastingPlugin
+            DefaultRaycastingPlugin,
+            WireframePlugin
         ))
         .add_systems(Startup, (skybox::build_skybox, setup::setup))
         .add_systems(

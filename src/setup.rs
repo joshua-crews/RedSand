@@ -1,6 +1,9 @@
 use bevy::prelude::*;
+use bevy::pbr::wireframe::{Wireframe, WireframeColor};
+
 use crate::camera;
 use crate::skybox;
+use crate::planet;
 
 #[derive(Component)]
 pub struct Ground;
@@ -13,16 +16,17 @@ pub fn setup(
 ) {
     let planet = (
         PbrBundle {
-            mesh: meshes.add(shape::UVSphere::default().into()),
-            /*material: materials.add(StandardMaterial {
-                base_color_texture: Some(asset_server.load("textures/sample_mars.png")),
-                ..default()
-            }),*/
-            material: materials.add(Color::GRAY.into()),
+            mesh: meshes.add(planet::PlanetShape::default().into()),
+            material: materials.add(Color::SILVER.into()),
             ..Default::default()
+        },
+        Wireframe,
+        WireframeColor {
+            color: Color::BLACK,
         },
         camera::ThirdPersonCameraTarget,
     );
+
     commands.spawn(planet);
     commands.spawn(PointLightBundle {
         transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
