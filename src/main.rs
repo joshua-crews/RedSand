@@ -16,7 +16,8 @@ fn main() {
             DefaultPlugins.set(bevy_mod_raycast::low_latency_window_plugin()),
             ThirdPersonCameraPlugin,
             DefaultRaycastingPlugin,
-            WireframePlugin
+            WireframePlugin,
+            MaterialPlugin::<planet::PlanetMaterial>::default()
         ))
         .add_systems(Startup, (skybox::build_skybox, setup::setup))
         .add_systems(

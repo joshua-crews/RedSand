@@ -76,7 +76,7 @@ pub fn orbit_mouse(
     found_planet: Res<CursorOverPlanet>,
 ) {
     let rotation: Vec2;
-    let Ok((mut cam, mut cam_transform)):
+    let Ok((cam, mut cam_transform)):
         Result<(&ThirdPersonCamera, Mut<Transform>), QuerySingleError> =
         cam_q.get_single_mut() else { return };
     let mut position: Vec2 = Vec2::new(0.0, 0.0);

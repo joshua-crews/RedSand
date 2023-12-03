@@ -1,5 +1,7 @@
-use bevy::prelude::*;
-use bevy::pbr::wireframe::{Wireframe, WireframeColor};
+use bevy::{
+    prelude::*,
+    pbr::wireframe::{Wireframe, WireframeColor}
+};
 
 use crate::camera;
 use crate::skybox;
@@ -12,18 +14,27 @@ pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut planet_materials: ResMut<Assets<planet::PlanetMaterial>>,
     asset_server: Res<AssetServer>
 ) {
+    planet::create_provinces();
     let planet = (
-        PbrBundle {
-            mesh: meshes.add(planet::PlanetShape::default().into()),
-            material: materials.add(Color::SILVER.into()),
-            ..Default::default()
+        MaterialMeshBundle {
+            mesh: meshes.add(Mesh::from(planet::PlanetMesh {
+                resolution: 20,
+                size: 1.0
+            })),
+            material: planet_materials.add(planet::PlanetMaterial {
+                color_texture: Some(asset_server.load("textures/8k_mars.png"))
+            }),
+            ..default()
         },
+        /*
         Wireframe,
         WireframeColor {
             color: Color::BLACK,
         },
+        */
         camera::ThirdPersonCameraTarget,
     );
 
