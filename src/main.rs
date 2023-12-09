@@ -1,25 +1,35 @@
-mod setup;
-mod skybox;
 mod camera;
 mod planet;
+mod setup;
+mod skybox;
 
-use bevy::{
-    prelude::*,
-    pbr::wireframe::WireframePlugin
-};
+use bevy::{pbr::wireframe::WireframePlugin, prelude::*};
 use bevy_mod_raycast::prelude::*;
 use camera::ThirdPersonCameraPlugin;
 
 fn main() {
     App::new()
         .add_plugins((
+            /*
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    resolution: (1920.0, 1080.0).into(),
+                    title: "Red Sands".to_string(),
+                    ..default()
+                }),
+                ..default()
+            }),
+            */
             DefaultPlugins.set(bevy_mod_raycast::low_latency_window_plugin()),
             ThirdPersonCameraPlugin,
             DefaultRaycastingPlugin,
             WireframePlugin,
-            MaterialPlugin::<planet::PlanetMaterial>::default()
+            MaterialPlugin::<planet::PlanetMaterial>::default(),
         ))
-        .add_systems(Startup, (skybox::build_skybox, setup::setup))
+        .add_systems(
+            Startup,
+            (planet::setup, skybox::build_skybox, setup::setup).chain(),
+        )
         .add_systems(
             Update,
             (

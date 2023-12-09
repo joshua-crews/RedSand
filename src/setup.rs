@@ -1,11 +1,11 @@
 use bevy::{
+    pbr::wireframe::{Wireframe, WireframeColor},
     prelude::*,
-    pbr::wireframe::{Wireframe, WireframeColor}
 };
 
 use crate::camera;
-use crate::skybox;
 use crate::planet;
+use crate::skybox;
 
 #[derive(Component)]
 pub struct Ground;
@@ -15,17 +15,16 @@ pub fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut planet_materials: ResMut<Assets<planet::PlanetMaterial>>,
-    asset_server: Res<AssetServer>
+    asset_server: Res<AssetServer>,
 ) {
-    planet::create_provinces();
     let planet = (
         MaterialMeshBundle {
             mesh: meshes.add(Mesh::from(planet::PlanetMesh {
                 resolution: 20,
-                size: 1.0
+                size: 1.0,
             })),
             material: planet_materials.add(planet::PlanetMaterial {
-                color_texture: Some(asset_server.load("textures/8k_mars.png"))
+                color_texture: Some(asset_server.load("saves/output.png")),
             }),
             ..default()
         },
