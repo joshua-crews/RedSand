@@ -8,12 +8,10 @@ use bevy::{
 };
 use bevy_mod_raycast::prelude::*;
 
-use crate::camera::ThirdPersonCamera;
-use crate::{camera, planet};
+use crate::camera_system::ThirdPersonCamera;
+use crate::{camera_system, loading_screen::AppState::TitleScreen, planet};
 
-use crate::planet::MapImage;
-use crate::planet::MAP_HEIGHT;
-use crate::planet::MAP_WIDTH;
+use crate::planet::{MapImage, MAP_HEIGHT, MAP_WIDTH};
 
 #[derive(Resource)]
 pub struct CursorOverPlanet(bool);
@@ -29,10 +27,12 @@ impl Plugin for MousePlugin {
             .add_systems(
                 Update,
                 (
-                    ray_cast_planet,
-                    orbit_mouse,
-                    zoom_mouse.run_if(camera::zoom_condition),
-                    planet_province_coordinates,
+                    ray_cast_planet.run_if(in_state(TitleScreen)),
+                    orbit_mouse.run_if(in_state(TitleScreen)),
+                    zoom_mouse
+                        .run_if(in_state(TitleScreen))
+                        .run_if(camera_system::zoom_condition),
+                    planet_province_coordinates.run_if(in_state(TitleScreen)),
                 )
                     .chain(),
             );
@@ -42,7 +42,7 @@ impl Plugin for MousePlugin {
 fn ray_cast_planet(
     cursor_ray: Res<CursorRay>,
     mut raycast: Raycast,
-    planet_q: Query<&Transform, With<camera::ThirdPersonCameraTarget>>,
+    planet_q: Query<&Transform, With<camera_system::ThirdPersonCameraTarget>>,
     mut found_planet: ResMut<CursorOverPlanet>,
 ) {
     let mut still_over: bool = false;
@@ -64,7 +64,7 @@ fn ray_cast_planet(
 fn planet_province_coordinates(
     cursor_ray: Res<CursorRay>,
     mut raycast: Raycast,
-    planet_q: Query<&Transform, With<camera::ThirdPersonCameraTarget>>,
+    planet_q: Query<&Transform, With<camera_system::ThirdPersonCameraTarget>>,
     provinces_query: Query<&planet::Province>,
     map_image_query: Res<MapImage>,
 ) {
@@ -94,7 +94,7 @@ fn planet_province_coordinates(
 
                 for province in provinces_query.iter() {
                     if province.color == [r, g, b] {
-                        println!("Found Province with ID: {}", province.id);
+                        //println!("Found Province with ID: {}", province.id);
                         break;
                     }
                 }

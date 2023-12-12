@@ -13,3 +13,4 @@ itertools = "0.12.0"
 unzip3 = "1.0.0"
 image = { version = "0.24.7", features = [] }
 rand = "0.8.5"
+bevy_asset_loader = "0.18.0"

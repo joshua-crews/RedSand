@@ -3,15 +3,17 @@ mod mouse;
 use bevy::prelude::*;
 pub use mouse::{orbit_mouse, MousePlugin};
 
+use crate::loading_screen;
+
 pub struct ThirdPersonCameraPlugin;
 
 impl Plugin for ThirdPersonCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(MousePlugin).add_systems(
             Update,
-            (
-                sync_player_camera.after(orbit_mouse),
-            ),
+            (sync_player_camera
+                .after(orbit_mouse)
+                .run_if(in_state(loading_screen::AppState::TitleScreen)),),
         );
     }
 }
@@ -64,8 +66,12 @@ fn sync_player_camera(
     planet_q: Query<&Transform, With<ThirdPersonCameraTarget>>,
     mut cam_q: Query<(&mut ThirdPersonCamera, &mut Transform), Without<ThirdPersonCameraTarget>>,
 ) {
-    let Ok(planet) = planet_q.get_single() else { return };
-    let Ok((cam, mut cam_transform)) = cam_q.get_single_mut() else { return };
+    let Ok(planet) = planet_q.get_single() else {
+        return;
+    };
+    let Ok((cam, mut cam_transform)) = cam_q.get_single_mut() else {
+        return;
+    };
     let rotation_matrix = Mat3::from_quat(cam_transform.rotation);
 
     let desired_translation =
@@ -76,6 +82,8 @@ fn sync_player_camera(
 }
 
 pub fn zoom_condition(cam_q: Query<&ThirdPersonCamera, With<ThirdPersonCamera>>) -> bool {
-    let Ok(cam) = cam_q.get_single() else { return false };
+    let Ok(cam) = cam_q.get_single() else {
+        return false;
+    };
     return cam.zoom_enabled;
 }

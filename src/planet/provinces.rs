@@ -1,4 +1,4 @@
-use image::{Rgb, RgbImage};
+use image::{Rgb, RgbImage, Rgba, RgbaImage};
 use rand::prelude::*;
 
 pub fn create_province_colors(
@@ -71,6 +71,33 @@ pub fn create_provinces_image(
             }
         }
     }
+
+    let mut border_image: RgbaImage = RgbaImage::new(width, height);
+
+    for x in 0..width {
+        for y in 0..height {
+            let current_color = *image.get_pixel(x, y);
+
+            for i in -1..=1 {
+                for j in -1..=1 {
+                    let nx = x as i32 + i;
+                    let ny = y as i32 + j;
+
+                    if nx < 0 || ny < 0 || nx >= width as i32 || ny >= height as i32 {
+                        continue;
+                    }
+
+                    let neighbor_color = *image.get_pixel(nx as u32, ny as u32);
+
+                    if current_color != neighbor_color {
+                        *border_image.get_pixel_mut(x, y) = Rgba([0, 0, 0, 255]);
+                        break;
+                    }
+                }
+            }
+        }
+    }
     image.save("assets/saves/output.png").unwrap();
+    border_image.save("assets/saves/borders.png").unwrap();
     return image;
 }

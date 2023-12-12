@@ -1,6 +1,7 @@
 use std::usize;
 
 use bevy::{prelude::*, reflect::TypePath, render::render_resource::AsBindGroup};
+use bevy_asset_loader::asset_collection::AssetCollection;
 use image::RgbImage;
 
 mod planet_material;
@@ -11,11 +12,14 @@ const NUM_PROVINCES: usize = 50;
 pub const MAP_HEIGHT: u32 = 500;
 pub const MAP_WIDTH: u32 = 1000;
 
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+#[derive(Asset, AssetCollection, Resource, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PlanetMaterial {
     #[texture(1)]
     #[sampler(2)]
     pub color_texture: Option<Handle<Image>>,
+    #[texture(3)]
+    #[sampler(4)]
+    pub border_texture: Option<Handle<Image>>,
 }
 
 pub struct PlanetMesh {
@@ -29,7 +33,7 @@ pub struct Province {
     pub color: [u8; 3],
 }
 
-#[derive(Resource)]
+#[derive(AssetCollection, Resource)]
 pub struct MapImage {
     pub image: RgbImage,
 }

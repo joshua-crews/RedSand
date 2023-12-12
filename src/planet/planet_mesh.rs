@@ -1,14 +1,14 @@
+use crate::planet;
 use bevy::{
     math::Vec3Swizzles,
     prelude::*,
     render::{
         mesh::{Indices, VertexAttributeValues},
-        render_resource::{PrimitiveTopology},
+        render_resource::PrimitiveTopology,
     },
 };
-use unzip3::Unzip3;
 use std::f32::consts::PI;
-use crate::planet;
+use unzip3::Unzip3;
 
 impl From<planet::PlanetMesh> for Mesh {
     fn from(planet: planet::PlanetMesh) -> Self {
@@ -24,12 +24,10 @@ impl From<planet::PlanetMesh> for Mesh {
         let (vert_lists, triangle_lists, uv_lists): (
             Vec<Vec<Vec3>>,
             Vec<Vec<u32>>,
-            Vec<Vec<Vec2>>
+            Vec<Vec<Vec2>>,
         ) = directions
             .iter()
-            .map(|direction| {
-                face(planet.resolution, *direction, planet.size)
-            })
+            .map(|direction| face(planet.resolution, *direction, planet.size))
             .unzip3();
 
         let vertices = vert_lists
@@ -42,8 +40,7 @@ impl From<planet::PlanetMesh> for Mesh {
             .enumerate()
             .flat_map(|(face_id, list)| {
                 list.iter().map(move |local_idx| {
-                    let num_indices = planet.resolution
-                        * planet.resolution;
+                    let num_indices = planet.resolution * planet.resolution;
                     local_idx + face_id as u32 * num_indices
                 })
             })
@@ -54,15 +51,11 @@ impl From<planet::PlanetMesh> for Mesh {
             .flat_map(|uvs| uvs.iter().map(|uv| [uv.x, uv.y]))
             .collect::<Vec<[f32; 2]>>();
 
-        let mut mesh: Mesh= Mesh::new(PrimitiveTopology::TriangleList);
+        let mut mesh: Mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.set_indices(Some(Indices::U32(triangle_list.clone())));
-        mesh.insert_attribute(
-            Mesh::ATTRIBUTE_POSITION, vertices.clone(),
-        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices.clone());
 
-        mesh.insert_attribute(
-            Mesh::ATTRIBUTE_NORMAL, vertices.clone(),
-        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vertices.clone());
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
         return mesh;
     }
@@ -73,7 +66,8 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
     let axis_b = local_up.cross(axis_a);
 
     let mut vertices = Vec::with_capacity(resolution as usize * resolution as usize);
-    let mut triangles = Vec::with_capacity((resolution as usize - 1) * (resolution as usize - 1) * 6);
+    let mut triangles =
+        Vec::with_capacity((resolution as usize - 1) * (resolution as usize - 1) * 6);
     let mut uvs = Vec::with_capacity(resolution as usize * resolution as usize);
 
     for y in 0..resolution {
@@ -82,10 +76,9 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
             let percent_x = x as f32 / (resolution - 1) as f32;
             let percent_y = y as f32 / (resolution - 1) as f32;
 
-            let mut point_on_unit_cube: Vec3 = local_up
-                + (percent_x - 0.5) * 2.0 * axis_a
-                + (percent_y - 0.5) * 2.0 * axis_b;
-            let mut point_on_unit_sphere: Vec3 = point_on_unit_cube.normalize() * size;
+            let point_on_unit_cube: Vec3 =
+                local_up + (percent_x - 0.5) * 2.0 * axis_a + (percent_y - 0.5) * 2.0 * axis_b;
+            let point_on_unit_sphere: Vec3 = point_on_unit_cube.normalize() * size;
 
             vertices.push(point_on_unit_sphere);
 

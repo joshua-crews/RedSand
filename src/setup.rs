@@ -3,19 +3,16 @@ use bevy::{
     prelude::*,
 };
 
-use crate::camera;
+use crate::camera_system;
+use crate::game_assets::ImageAssets;
 use crate::planet;
 use crate::skybox;
-
-#[derive(Component)]
-pub struct Ground;
 
 pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut planet_materials: ResMut<Assets<planet::PlanetMaterial>>,
-    asset_server: Res<AssetServer>,
+    image_assets: Res<ImageAssets>,
 ) {
     let planet = (
         MaterialMeshBundle {
@@ -24,17 +21,16 @@ pub fn setup(
                 size: 1.0,
             })),
             material: planet_materials.add(planet::PlanetMaterial {
-                color_texture: Some(asset_server.load("saves/output.png")),
+                color_texture: Some(image_assets.color_texture.clone()),
+                border_texture: Some(image_assets.border_texture.clone()),
             }),
             ..default()
         },
-        /*
         Wireframe,
         WireframeColor {
             color: Color::BLACK,
         },
-        */
-        camera::ThirdPersonCameraTarget,
+        camera_system::ThirdPersonCameraTarget,
     );
 
     commands.spawn(planet);
@@ -42,17 +38,6 @@ pub fn setup(
         transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
         ..Default::default()
     });
-
-    let skybox_handle = asset_server.load(skybox::CUBEMAPS[0].0);
-    let camera = (
-        Camera3dBundle {
-            transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        },
-        camera::ThirdPersonCamera::default(),
-        bevy::core_pipeline::Skybox(skybox_handle.clone()),
-    );
-    commands.spawn(camera);
 
     commands.insert_resource(AmbientLight {
         color: Color::rgb_u8(210, 220, 240),
@@ -62,6 +47,6 @@ pub fn setup(
     commands.insert_resource(skybox::Cubemap {
         is_loaded: false,
         index: 0,
-        image_handle: skybox_handle,
+        image_handle: image_assets.skybox_texture.clone(),
     });
 }

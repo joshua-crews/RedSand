@@ -8,14 +8,9 @@ use bevy::{
         texture::CompressedImageFormats,
     },
 };
-use std::f32::consts::PI;
 
-pub const CUBEMAPS: &[(&str, CompressedImageFormats)] = &[
-    (
-        "textures/skybox/cubemap2.png",
-        CompressedImageFormats::NONE,
-    ),
-];
+use crate::game_assets::ImageAssets;
+use std::f32::consts::PI;
 
 #[derive(Resource)]
 pub struct Cubemap {
@@ -24,7 +19,7 @@ pub struct Cubemap {
     pub image_handle: Handle<Image>,
 }
 
-pub fn build_skybox(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn build_skybox(mut commands: Commands, skybox_handler: Res<ImageAssets>) {
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: 32000.0,
@@ -35,8 +30,6 @@ pub fn build_skybox(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..Default::default()
     });
 
-    let skybox_handle = asset_server.load(CUBEMAPS[0].0);
-
     commands.insert_resource(AmbientLight {
         color: Color::rgb_u8(210, 220, 240),
         brightness: 1.0,
@@ -45,47 +38,8 @@ pub fn build_skybox(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(Cubemap {
         is_loaded: false,
         index: 0,
-        image_handle: skybox_handle,
+        image_handle: skybox_handler.skybox_texture.clone(),
     });
-}
-
-pub const CUBEMAP_SWAP_DELAY: f32 = 3.0;
-
-pub fn cycle_cubemap_asset(
-    time: Res<Time>,
-    mut next_swap: Local<f32>,
-    mut cubemap: ResMut<Cubemap>,
-    asset_server: Res<AssetServer>,
-    render_device: Res<RenderDevice>,
-) {
-    let now = time.elapsed_seconds();
-    if *next_swap == 0.0 {
-        *next_swap = now + CUBEMAP_SWAP_DELAY;
-        return;
-    } else if now < *next_swap {
-        return;
-    }
-    *next_swap += CUBEMAP_SWAP_DELAY;
-
-    let supported_compressed_formats =
-        CompressedImageFormats::from_features(render_device.features());
-
-    let mut new_index = cubemap.index;
-    for _ in 0..CUBEMAPS.len() {
-        new_index = (new_index + 1) % CUBEMAPS.len();
-        if supported_compressed_formats.contains(CUBEMAPS[new_index].1) {
-            break;
-        }
-        info!("Skipping unsupported format: {:?}", CUBEMAPS[new_index]);
-    }
-
-    if new_index == cubemap.index {
-        return;
-    }
-
-    cubemap.index = new_index;
-    cubemap.image_handle = asset_server.load(CUBEMAPS[cubemap.index].0);
-    cubemap.is_loaded = false;
 }
 
 pub fn asset_loaded(
