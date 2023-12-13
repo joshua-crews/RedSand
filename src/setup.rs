@@ -26,10 +26,12 @@ pub fn setup(
             }),
             ..default()
         },
+        /*
         Wireframe,
         WireframeColor {
             color: Color::BLACK,
         },
+        */
         camera_system::ThirdPersonCameraTarget,
     );
 

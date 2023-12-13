@@ -88,6 +88,8 @@ fn planet_province_coordinates(
                 let texture_x: u32 = (u * MAP_WIDTH as f32) as u32;
                 let texture_y: u32 = (v * MAP_HEIGHT as f32) as u32;
 
+                println!("Texture x: {} y: {}", texture_x, texture_y);
+
                 let r = map_image_query.image.get_pixel(texture_x, texture_y).0[0];
                 let g = map_image_query.image.get_pixel(texture_x, texture_y).0[1];
                 let b = map_image_query.image.get_pixel(texture_x, texture_y).0[2];

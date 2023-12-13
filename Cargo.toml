@@ -6,9 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.12.0"
+bevy = "0.12.1"
 bevy_mod_raycast = "0.16.0"
-hexasphere = "9.1.0"
 itertools = "0.12.0"
 unzip3 = "1.0.0"
 image = { version = "0.24.7", features = [] }
