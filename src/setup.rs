@@ -1,4 +1,5 @@
 use bevy::{
+    asset::AssetLoader,
     pbr::wireframe::{Wireframe, WireframeColor},
     prelude::*,
 };
@@ -13,6 +14,7 @@ pub fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut planet_materials: ResMut<Assets<planet::PlanetMaterial>>,
     image_assets: Res<ImageAssets>,
+    asset_server: Res<AssetServer>,
 ) {
     let planet = (
         MaterialMeshBundle {
@@ -22,7 +24,7 @@ pub fn setup(
             })),
             material: planet_materials.add(planet::PlanetMaterial {
                 color_texture: Some(image_assets.color_texture.clone()),
-                border_texture: Some(image_assets.border_texture.clone()),
+                border_texture: Some(asset_server.load("saves/borders.png")),
             }),
             ..default()
         },

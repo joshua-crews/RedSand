@@ -4,13 +4,14 @@ use bevy::{prelude::*, reflect::TypePath, render::render_resource::AsBindGroup};
 use bevy_asset_loader::asset_collection::AssetCollection;
 use image::RgbImage;
 
+mod noise;
 mod planet_material;
 mod planet_mesh;
 mod provinces;
 
-const NUM_PROVINCES: usize = 50;
-pub const MAP_HEIGHT: u32 = 500;
-pub const MAP_WIDTH: u32 = 1000;
+const NUM_PROVINCES: usize = 120;
+pub const MAP_HEIGHT: u32 = 1080;
+pub const MAP_WIDTH: u32 = 1920;
 
 #[derive(Asset, AssetCollection, Resource, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PlanetMaterial {

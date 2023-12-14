@@ -1,6 +1,10 @@
 use image::{Rgb, RgbImage, Rgba, RgbaImage};
 use rand::prelude::*;
 
+use super::noise;
+
+const DISPLACEMENT_FACTOR: f64 = 86.0;
+
 pub fn create_province_colors(
     cell_count: usize,
     width: u32,
@@ -43,6 +47,7 @@ pub fn create_provinces_image(
     height: u32,
 ) -> RgbImage {
     let mut image: RgbImage = RgbImage::new(width, height);
+    let noise_map: Vec<Vec<f64>> = noise::make_perlin_noise(width, height);
     for x in 0..width {
         for y in 0..height {
             let mut closest = None;
@@ -51,8 +56,17 @@ pub fn create_provinces_image(
                 let color = point.0;
                 let px = point.1;
                 let py = point.2;
+
+                let noise_value_x = noise_map[x as usize][y as usize];
+                let noise_value_y =
+                    noise_map[((x + width / 2) % width as u32) as usize][y as usize];
+
+                let distorted_x = x as f64 + noise_value_x * DISPLACEMENT_FACTOR;
+                let distorted_y = y as f64 + noise_value_y * DISPLACEMENT_FACTOR;
+
                 let distance =
-                    ((px as i32 - x as i32).pow(2) + (py as i32 - y as i32).pow(2)) as f64;
+                    ((px as f64 - distorted_x).powi(2) + (py as f64 - distorted_y).powi(2)).sqrt();
+
                 match min_distance {
                     None => {
                         min_distance = Some(distance);
@@ -66,6 +80,7 @@ pub fn create_provinces_image(
                     }
                 }
             }
+
             if let Some(color) = closest {
                 *image.get_pixel_mut(x, y) = color;
             }
