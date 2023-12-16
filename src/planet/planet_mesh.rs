@@ -46,17 +46,23 @@ impl From<planet::PlanetMesh> for Mesh {
             })
             .collect::<Vec<u32>>();
 
-        let uvs = uv_lists
+        let mut uvs: Vec<[f32; 2]> = vertices
             .iter()
-            .flat_map(|uvs| uvs.iter().map(|uv| [uv.x, uv.y]))
-            .collect::<Vec<[f32; 2]>>();
+            .map(|v| {
+                //let u = 0.5 + v.dot(&axis_a).atan2(v.dot(&axis_b)) / (2.0 * PI);
+                //let v = 0.5 - v.dot(&local_up).asin() / PI;
+                let u = ((v[0].atan2(v[2]) + PI) % (2.0 * PI)) / (2.0 * PI);
+                let v = ((v[1] + 1.0) % 2.0) / 2.0;
+                [u, v]
+            })
+            .collect();
 
         let mut mesh: Mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.set_indices(Some(Indices::U32(triangle_list.clone())));
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices.clone());
-
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vertices.clone());
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+
         return mesh;
     }
 }
@@ -71,6 +77,7 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
     let mut uvs = Vec::with_capacity(resolution as usize * resolution as usize);
 
     for y in 0..resolution {
+        let percent_y_uv = y as f32 / (resolution - 1) as f32;
         for x in 0..resolution {
             let i = x + y * resolution;
             let percent_x = x as f32 / (resolution - 1) as f32;
@@ -78,17 +85,28 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
 
             let point_on_unit_cube: Vec3 =
                 local_up + (percent_x - 0.5) * 2.0 * axis_a + (percent_y - 0.5) * 2.0 * axis_b;
+            //println!("Point on cube: {:?}", point_on_unit_cube);
             let point_on_unit_sphere: Vec3 = point_on_unit_cube.normalize() * size;
 
             vertices.push(point_on_unit_sphere);
 
-            let uv_x = 0.5 + point_on_unit_sphere.x.atan2(point_on_unit_sphere.z) / (2.0 * PI);
-            let uv_y = 0.5 - point_on_unit_sphere.y.asin() / PI;
+            //let uv_x = 0.5 + point_on_unit_sphere.x.atan2(point_on_unit_sphere.z) / (2.0 * PI);
+            //let uv_y = 0.5 - point_on_unit_sphere.y.asin() / PI;
 
-            // Correct the UVs at the seam
-            let corrected_uv_x = if uv_x < 0.0 { uv_x + 1.0 } else { uv_x };
-            let uv = Vec2::new(corrected_uv_x, uv_y);
-            uvs.push(uv);
+            if x == 0 && local_up != Vec3::Y && local_up != Vec3::NEG_Y {
+                uvs.push(Vec2::new(0.0, percent_y_uv));
+            } else if x == resolution - 1 && local_up != Vec3::Y && local_up != Vec3::NEG_Y {
+                uvs.push(Vec2::new(0.0, percent_y_uv));
+            } else {
+                let uv_x = 0.5 + point_on_unit_sphere.x.atan2(point_on_unit_sphere.z) / (2.0 * PI);
+                let uv_y = 0.5 - point_on_unit_sphere.y.asin() / PI;
+                uvs.push(Vec2::new(uv_x, uv_y));
+            }
+
+            // This is not working
+            //let corrected_uv_x = if uv_x < 0.0 { uv_x + 1.0 } else { uv_x };
+            //let uv = Vec2::new(corrected_uv_x, uv_y);
+            //uvs.push(uv);
 
             if x != resolution - 1 && y != resolution - 1 {
                 triangles.push(i);

@@ -2,7 +2,7 @@ use bevy::{core_pipeline::Skybox, prelude::*};
 use bevy_asset_loader::prelude::*;
 
 use crate::camera_system;
-use crate::game_assets::ImageAssets;
+use crate::game_assets;
 use crate::planet;
 use crate::setup;
 use crate::skybox;
@@ -19,7 +19,10 @@ impl Plugin for LoadingScreenPlugin {
             .add_loading_state(
                 LoadingState::new(AppState::BootingApp).continue_to_state(AppState::TitleScreen),
             )
-            .add_collection_to_loading_state::<_, ImageAssets>(AppState::BootingApp)
+            .add_collection_to_loading_state::<_, game_assets::ImageAssets>(AppState::BootingApp)
+            .add_collection_to_loading_state::<_, game_assets::NormalMapAssets>(
+                AppState::BootingApp,
+            )
             .add_systems(OnEnter(AppState::BootingApp), loading_screen)
             .add_systems(
                 OnEnter(AppState::TitleScreen),
@@ -44,7 +47,7 @@ impl Plugin for LoadingScreenPlugin {
 fn enter_game(
     mut commands: Commands,
     loading_query: Query<Entity, With<LoadingScreenComponent>>,
-    skybox_cubemap: Res<ImageAssets>,
+    skybox_cubemap: Res<game_assets::ImageAssets>,
 ) {
     for loading_component in loading_query.iter() {
         commands.entity(loading_component).despawn();

@@ -8,3 +8,9 @@ pub struct ImageAssets {
     #[asset(path = "textures/skybox/cubemap2.png")]
     pub skybox_texture: Handle<Image>,
 }
+
+#[derive(AssetCollection, Resource)]
+pub struct NormalMapAssets {
+    #[asset(path = "textures/terrain_normals/sample_map.png")]
+    pub sample_normal: Handle<Image>,
+}

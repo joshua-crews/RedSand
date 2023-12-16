@@ -21,6 +21,9 @@ pub struct PlanetMaterial {
     #[texture(3)]
     #[sampler(4)]
     pub border_texture: Option<Handle<Image>>,
+    #[texture(5)]
+    #[sampler(6)]
+    pub normal_map: Option<Handle<Image>>,
 }
 
 pub struct PlanetMesh {
