@@ -1,25 +1,20 @@
 use bevy::{
-    asset::AssetLoader,
     pbr::{
         wireframe::{Wireframe, WireframeColor},
         ExtendedMaterial,
     },
     prelude::*,
-    render::{
-        mesh::{Indices, Mesh, VertexAttributeValues},
-        render_resource::PrimitiveTopology,
-    },
+    render::mesh::Mesh,
 };
 
+use crate::camera_system;
 use crate::game_assets;
 use crate::planet;
 use crate::skybox;
-use crate::{camera_system, planet::PlanetMesh};
 
 pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut planet_mats: ResMut<Assets<ExtendedMaterial<StandardMaterial, planet::PlanetMaterial>>>,
     loaded_images: Res<Assets<Image>>,
     image_assets: Res<game_assets::ImageAssets>,
@@ -52,12 +47,10 @@ pub fn setup(
                 }),
                 ..default()
             },
-            /*
             Wireframe,
             WireframeColor {
                 color: Color::BLACK,
             },
-            */
             camera_system::ThirdPersonCameraTarget,
         );
 

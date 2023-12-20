@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::Skybox, prelude::*};
+use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
 use crate::camera_system;
@@ -102,5 +102,4 @@ pub enum AppState {
     #[default]
     BootingApp,
     TitleScreen,
-    ErrorScreen,
 }

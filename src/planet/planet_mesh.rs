@@ -1,14 +1,10 @@
-use crate::{game_assets::HeightMapAssets, planet};
+use crate::planet;
 use bevy::{
     math::Vec3Swizzles,
     prelude::*,
-    render::{
-        mesh::{Indices, VertexAttributeValues},
-        render_resource::PrimitiveTopology,
-    },
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use std::f32::consts::PI;
-use unzip3::Unzip3;
 
 const HEIGHT_MAP_SCALE: f32 = 0.25;
 
@@ -23,14 +19,10 @@ impl From<planet::PlanetMesh> for Mesh {
             Vec3::NEG_Z,
         ];
 
-        let (vert_lists, triangle_lists, uv_lists): (
-            Vec<Vec<Vec3>>,
-            Vec<Vec<u32>>,
-            Vec<Vec<Vec2>>,
-        ) = directions
+        let (vert_lists, triangle_lists): (Vec<Vec<Vec3>>, Vec<Vec<u32>>) = directions
             .iter()
             .map(|direction| face(planet.resolution, *direction, planet.size))
-            .unzip3();
+            .unzip();
 
         let vertices = vert_lists
             .iter()
@@ -48,7 +40,7 @@ impl From<planet::PlanetMesh> for Mesh {
             })
             .collect::<Vec<u32>>();
 
-        let mut uvs: Vec<[f32; 2]> = vertices
+        let uvs: Vec<[f32; 2]> = vertices
             .iter()
             .map(|v| {
                 let u = ((v[0].atan2(v[2]) + PI) % (2.0 * PI)) / (2.0 * PI);
@@ -83,17 +75,15 @@ impl From<planet::PlanetMesh> for Mesh {
     }
 }
 
-fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec<Vec2>) {
+fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>) {
     let axis_a = local_up.yzx();
     let axis_b = local_up.cross(axis_a);
 
     let mut vertices = Vec::with_capacity(resolution as usize * resolution as usize);
     let mut triangles =
         Vec::with_capacity((resolution as usize - 1) * (resolution as usize - 1) * 6);
-    let mut uvs = Vec::with_capacity(resolution as usize * resolution as usize);
 
     for y in 0..resolution {
-        let percent_y_uv = y as f32 / (resolution - 1) as f32;
         for x in 0..resolution {
             let i = x + y * resolution;
             let percent_x = x as f32 / (resolution - 1) as f32;
@@ -104,16 +94,6 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
             let point_on_unit_sphere: Vec3 = point_on_unit_cube.normalize() * size;
 
             vertices.push(point_on_unit_sphere);
-
-            if x == 0 && local_up != Vec3::Y && local_up != Vec3::NEG_Y {
-                uvs.push(Vec2::new(0.0, percent_y_uv));
-            } else if x == resolution - 1 && local_up != Vec3::Y && local_up != Vec3::NEG_Y {
-                uvs.push(Vec2::new(0.0, percent_y_uv));
-            } else {
-                let uv_x = 0.5 + point_on_unit_sphere.x.atan2(point_on_unit_sphere.z) / (2.0 * PI);
-                let uv_y = 0.5 - point_on_unit_sphere.y.asin() / PI;
-                uvs.push(Vec2::new(uv_x, uv_y));
-            }
 
             if x != resolution - 1 && y != resolution - 1 {
                 triangles.push(i);
@@ -126,7 +106,7 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
             }
         }
     }
-    (vertices, triangles, uvs)
+    (vertices, triangles)
 }
 
 fn sample_height_map(uv: Vec2, height_map: &Image) -> f32 {
@@ -159,7 +139,6 @@ fn compute_triangle_normal(p0: Vec3, p1: Vec3, p2: Vec3) -> Vec3 {
 
 fn compute_vertex_normals(vertices: &Vec<Vec3>, triangles: &Vec<u32>) -> Vec<Vec3> {
     let mut normals = vec![Vec3::ZERO; vertices.len()];
-
     let mut face_normals = Vec::with_capacity(triangles.len() / 3);
 
     for triangle in triangles.chunks(3) {

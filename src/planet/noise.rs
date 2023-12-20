@@ -1,8 +1,5 @@
 use bevy::math::Vec2;
-use noise::{NoiseFn, Perlin, Seedable};
 use std::f32::consts::PI;
-
-use image::{DynamicImage, RgbImage, Rgba};
 
 const GRID_SIZE: i32 = 400;
 
@@ -15,7 +12,7 @@ pub fn make_perlin_noise(width: u32, height: u32) -> Vec<Vec<f64>> {
             let mut freq: f32 = 1.0;
             let mut amp: f32 = 1.0;
 
-            for i in 0..12 {
+            for _ in 0..12 {
                 val += perlin(
                     (x as f32 * freq) / GRID_SIZE as f32,
                     (y as f32 * freq) / GRID_SIZE as f32,
