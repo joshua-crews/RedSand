@@ -71,10 +71,12 @@ impl From<planet::PlanetMesh> for Mesh {
             })
             .collect::<Vec<Vec3>>();
 
+        let normals = compute_vertex_normals(&deformed_vertices, &triangle_list);
+
         let mut mesh: Mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.set_indices(Some(Indices::U32(triangle_list.clone())));
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, deformed_vertices.clone());
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vertices.clone());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals.clone());
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
         return mesh;
@@ -146,4 +148,37 @@ fn sample_height_map(uv: Vec2, height_map: &Image) -> f32 {
 fn deform_with_heightmap(vertex: &Vec3, normal: &Vec3, uv: &Vec2, height_map: Image) -> Vec3 {
     let height_sample = sample_height_map(*uv, &height_map);
     return *vertex + *normal * (height_sample * HEIGHT_MAP_SCALE);
+}
+
+fn compute_triangle_normal(p0: Vec3, p1: Vec3, p2: Vec3) -> Vec3 {
+    let v0 = p1 - p0;
+    let v1 = p2 - p0;
+    let normal = v0.cross(v1).normalize();
+    return normal;
+}
+
+fn compute_vertex_normals(vertices: &Vec<Vec3>, triangles: &Vec<u32>) -> Vec<Vec3> {
+    let mut normals = vec![Vec3::ZERO; vertices.len()];
+
+    let mut face_normals = Vec::with_capacity(triangles.len() / 3);
+
+    for triangle in triangles.chunks(3) {
+        let normal = compute_triangle_normal(
+            vertices[triangle[0] as usize],
+            vertices[triangle[1] as usize],
+            vertices[triangle[2] as usize],
+        );
+        face_normals.push(normal);
+    }
+
+    for (i, &indice) in triangles.iter().enumerate() {
+        let vertex_index = indice as usize;
+        normals[vertex_index] += face_normals[i / 3];
+    }
+
+    for normal in &mut normals {
+        *normal = normal.normalize();
+    }
+
+    return normals;
 }
