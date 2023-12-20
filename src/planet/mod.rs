@@ -15,20 +15,15 @@ pub const MAP_WIDTH: u32 = 1920;
 
 #[derive(Asset, AssetCollection, Resource, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PlanetMaterial {
-    #[texture(1)]
-    #[sampler(2)]
-    pub color_texture: Option<Handle<Image>>,
-    #[texture(3)]
-    #[sampler(4)]
+    #[texture(100)]
+    #[sampler(101)]
     pub border_texture: Option<Handle<Image>>,
-    #[texture(5)]
-    #[sampler(6)]
-    pub normal_map: Option<Handle<Image>>,
 }
 
 pub struct PlanetMesh {
     pub resolution: u32,
     pub size: f32,
+    pub height_map: Image,
 }
 
 #[derive(Component)]

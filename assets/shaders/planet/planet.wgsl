@@ -1,37 +1,41 @@
-#import bevy_pbr::forward_io::VertexOutput
+#import bevy_pbr::{
+  pbr_fragment::pbr_input_from_standard_material,
+  pbr_functions::alpha_discard,
+}
 
-@group(1) @binding(1) var material_color_texture: texture_2d<f32>;
-@group(1) @binding(2) var material_color_sampler: sampler;
-@group(1) @binding(3) var border_texture: texture_2d<f32>;
-@group(1) @binding(4) var border_sampler: sampler;
-@group(1) @binding(5) var normal_texture: texture_2d<f32>;
-@group(1) @binding(6) var normal_sampler: sampler;
+#ifdef PREPASS_PIPELINE
+#import bevy_pbr::{
+  prepass_io::{VertexOutput, FragmentOutput},
+  pbr_deferred_functions::deferred_output,
+}
+#else
+#import bevy_pbr::{
+  forward_io::{VertexOutput, FragmentOutput},
+  pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
+}
+#endif
 
-// Mock-up constants for directional light parameters for now cause I am lazy af
-const light_color: vec3<f32> = vec3<f32>(1.0, 1.0, 1.0);
-const ambient_color: vec3<f32> = vec3<f32>(0.1, 0.1, 0.1);
+@group(1) @binding(100)
+var border_texture: texture_2d<f32>;
+@group(1) @binding(101)
+var border_sampler: sampler;
 
 @fragment
 fn fragment(
-    mesh: VertexOutput,
+    in: VertexOutput,
+    @builtin(front_facing) is_front: bool,
 ) -> @location(0) vec4<f32> {
-    // Wanna make this a const but dunno how since normalize aint constant
-    let light_direction: vec3<f32> = normalize(vec3<f32>(0.3, -1.0, -0.3));
-
-    let material_color: vec4<f32> = textureSample(material_color_texture, material_color_sampler, mesh.uv);
-    let border_color: vec4<f32> = textureSample(border_texture, border_sampler, mesh.uv);
-    let blended_color: vec4<f32> = mix(material_color, border_color, border_color.a);
-
-    var normal_tex_color: vec4<f32> = textureSample(normal_texture, normal_sampler, mesh.uv);
-
-    var normal_vector: vec3<f32> = normalize(normal_tex_color.rgb * 2.0 - 1.0);
-
-    let light_effect: f32 = max(dot(normal_vector, light_direction), 0.0);
-    let diffused_light: vec3<f32> = light_effect * light_color;
-
-    let lighting: vec3<f32> = diffused_light + ambient_color;
-    let color_with_lighting: vec3<f32> = blended_color.rgb * lighting;
-
-    return vec4<f32>(color_with_lighting, blended_color.a);
+    var pbr_input = pbr_input_from_standard_material(in, is_front);
+    let border_color: vec4<f32> = textureSample(border_texture, border_sampler, in.uv);
+    let blended_color: vec4<f32> = mix(pbr_input.material.base_color, border_color, border_color.a);
+    pbr_input.material.base_color = blended_color;
+#ifdef PREPASS_PIPELINE
+    let out = deferred_output(in, pbr_input);
+#else
+    var out: FragmentOutput;
+    out.color = apply_pbr_lighting(pbr_input);
+    out.color = main_pass_post_lighting_processing(pbr_input, out.color);
+#endif
+    return blended_color;
 }
 

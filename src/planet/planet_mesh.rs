@@ -1,4 +1,4 @@
-use crate::planet;
+use crate::{game_assets::HeightMapAssets, planet};
 use bevy::{
     math::Vec3Swizzles,
     prelude::*,
@@ -9,6 +9,8 @@ use bevy::{
 };
 use std::f32::consts::PI;
 use unzip3::Unzip3;
+
+const HEIGHT_MAP_SCALE: f32 = 0.25;
 
 impl From<planet::PlanetMesh> for Mesh {
     fn from(planet: planet::PlanetMesh) -> Self {
@@ -49,17 +51,29 @@ impl From<planet::PlanetMesh> for Mesh {
         let mut uvs: Vec<[f32; 2]> = vertices
             .iter()
             .map(|v| {
-                //let u = 0.5 + v.dot(&axis_a).atan2(v.dot(&axis_b)) / (2.0 * PI);
-                //let v = 0.5 - v.dot(&local_up).asin() / PI;
                 let u = ((v[0].atan2(v[2]) + PI) % (2.0 * PI)) / (2.0 * PI);
                 let v = ((v[1] + 1.0) % 2.0) / 2.0;
                 [u, v]
             })
             .collect();
 
+        let deformed_vertices = vertices
+            .iter()
+            .zip(vertices.iter())
+            .zip(uvs.iter())
+            .map(|((&vertex, &normal), &uv)| {
+                deform_with_heightmap(
+                    &vertex.into(),
+                    &normal.into(),
+                    &uv.into(),
+                    planet.height_map.clone().into(),
+                )
+            })
+            .collect::<Vec<Vec3>>();
+
         let mut mesh: Mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.set_indices(Some(Indices::U32(triangle_list.clone())));
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices.clone());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, deformed_vertices.clone());
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vertices.clone());
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
 
@@ -85,13 +99,9 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
 
             let point_on_unit_cube: Vec3 =
                 local_up + (percent_x - 0.5) * 2.0 * axis_a + (percent_y - 0.5) * 2.0 * axis_b;
-            //println!("Point on cube: {:?}", point_on_unit_cube);
             let point_on_unit_sphere: Vec3 = point_on_unit_cube.normalize() * size;
 
             vertices.push(point_on_unit_sphere);
-
-            //let uv_x = 0.5 + point_on_unit_sphere.x.atan2(point_on_unit_sphere.z) / (2.0 * PI);
-            //let uv_y = 0.5 - point_on_unit_sphere.y.asin() / PI;
 
             if x == 0 && local_up != Vec3::Y && local_up != Vec3::NEG_Y {
                 uvs.push(Vec2::new(0.0, percent_y_uv));
@@ -102,11 +112,6 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
                 let uv_y = 0.5 - point_on_unit_sphere.y.asin() / PI;
                 uvs.push(Vec2::new(uv_x, uv_y));
             }
-
-            // This is not working
-            //let corrected_uv_x = if uv_x < 0.0 { uv_x + 1.0 } else { uv_x };
-            //let uv = Vec2::new(corrected_uv_x, uv_y);
-            //uvs.push(uv);
 
             if x != resolution - 1 && y != resolution - 1 {
                 triangles.push(i);
@@ -120,4 +125,25 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>, Vec
         }
     }
     (vertices, triangles, uvs)
+}
+
+fn sample_height_map(uv: Vec2, height_map: &Image) -> f32 {
+    let width = height_map.texture_descriptor.size.width as f32;
+    let height = height_map.texture_descriptor.size.height as f32;
+
+    let x_pos = (uv.x * width).clamp(0.0, width - 1.0) as usize;
+    let y_pos = (uv.y * height).clamp(0.0, height - 1.0) as usize;
+    let buffer_pos = (y_pos * width as usize + x_pos) * 4; // *4 for RGBA even if we only use R
+
+    if buffer_pos < height_map.data.len() {
+        let height_value = height_map.data[buffer_pos];
+        height_value as f32 / 255.0
+    } else {
+        0.0
+    }
+}
+
+fn deform_with_heightmap(vertex: &Vec3, normal: &Vec3, uv: &Vec2, height_map: Image) -> Vec3 {
+    let height_sample = sample_height_map(*uv, &height_map);
+    return *vertex + *normal * (height_sample * HEIGHT_MAP_SCALE);
 }

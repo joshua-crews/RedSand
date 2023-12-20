@@ -23,6 +23,9 @@ impl Plugin for LoadingScreenPlugin {
             .add_collection_to_loading_state::<_, game_assets::NormalMapAssets>(
                 AppState::BootingApp,
             )
+            .add_collection_to_loading_state::<_, game_assets::HeightMapAssets>(
+                AppState::BootingApp,
+            )
             .add_systems(OnEnter(AppState::BootingApp), loading_screen)
             .add_systems(
                 OnEnter(AppState::TitleScreen),

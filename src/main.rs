@@ -5,9 +5,13 @@ mod planet;
 mod setup;
 mod skybox;
 
-use bevy::{pbr::wireframe::WireframePlugin, prelude::*};
+use bevy::{
+    pbr::{wireframe::WireframePlugin, ExtendedMaterial},
+    prelude::*,
+};
 use bevy_mod_raycast::prelude::*;
 use camera_system::ThirdPersonCameraPlugin;
+use planet::PlanetMaterial;
 
 fn main() {
     App::new()
@@ -26,7 +30,7 @@ fn main() {
             ThirdPersonCameraPlugin,
             DefaultRaycastingPlugin,
             WireframePlugin,
-            MaterialPlugin::<planet::PlanetMaterial>::default(),
+            MaterialPlugin::<ExtendedMaterial<StandardMaterial, PlanetMaterial>>::default(),
         ))
         .run();
 }
