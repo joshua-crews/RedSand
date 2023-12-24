@@ -14,6 +14,8 @@ use camera_system::ThirdPersonCameraPlugin;
 use planet::PlanetMaterial;
 
 fn main() {
+    // TODO this is a debugging tool only and should be left out of prod
+    std::env::set_var("RUST_BACKTRACE", "1");
     App::new()
         .add_plugins((
             DefaultPlugins

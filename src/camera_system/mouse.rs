@@ -9,7 +9,7 @@ use bevy::{
 use bevy_mod_raycast::prelude::*;
 
 use crate::camera_system::ThirdPersonCamera;
-use crate::{camera_system, loading_screen::AppState::TitleScreen, planet};
+use crate::{camera_system, loading_screen::AppState::InGame, planet};
 
 use crate::planet::{MapImage, MAP_HEIGHT, MAP_WIDTH};
 
@@ -27,12 +27,12 @@ impl Plugin for MousePlugin {
             .add_systems(
                 Update,
                 (
-                    ray_cast_planet.run_if(in_state(TitleScreen)),
-                    orbit_mouse.run_if(in_state(TitleScreen)),
+                    ray_cast_planet.run_if(in_state(InGame)),
+                    orbit_mouse.run_if(in_state(InGame)),
                     zoom_mouse
-                        .run_if(in_state(TitleScreen))
+                        .run_if(in_state(InGame))
                         .run_if(camera_system::zoom_condition),
-                    planet_province_coordinates.run_if(in_state(TitleScreen)),
+                    planet_province_coordinates.run_if(in_state(InGame)),
                 )
                     .chain(),
             );

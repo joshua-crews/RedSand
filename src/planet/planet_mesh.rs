@@ -1,4 +1,3 @@
-use crate::planet;
 use bevy::{
     math::Vec3Swizzles,
     prelude::*,
@@ -6,23 +5,36 @@ use bevy::{
 };
 use std::f32::consts::PI;
 
+use crate::game_assets;
+use crate::planet;
+
 const HEIGHT_MAP_SCALE: f32 = 0.25;
+
+pub fn spawn_face(
+    direction: Vec3,
+    loaded_images: &Res<Assets<Image>>,
+    height_assets: &Res<game_assets::HeightMapAssets>,
+) -> Option<Mesh> {
+    if let Some(height_map_image) = loaded_images.get(&height_assets.sample_height) {
+        return Some(
+            Mesh::from(planet::PlanetMesh {
+                resolution: 2,
+                size: 1.0,
+                height_map: height_map_image.clone(),
+                direction: direction,
+            })
+            .with_generated_tangents()
+            .unwrap(),
+        );
+    } else {
+        return None;
+    }
+}
 
 impl From<planet::PlanetMesh> for Mesh {
     fn from(planet: planet::PlanetMesh) -> Self {
-        let directions = [
-            Vec3::Y,
-            Vec3::NEG_Y,
-            Vec3::NEG_X,
-            Vec3::X,
-            Vec3::Z,
-            Vec3::NEG_Z,
-        ];
-
-        let (vert_lists, triangle_lists): (Vec<Vec<Vec3>>, Vec<Vec<u32>>) = directions
-            .iter()
-            .map(|direction| face(planet.resolution, *direction, planet.size))
-            .unzip();
+        let (vert_lists, triangle_lists): (Vec<Vec<Vec3>>, Vec<Vec<u32>>) =
+            face(planet.resolution, planet.direction, planet.size);
 
         let vertices = vert_lists
             .iter()
@@ -75,7 +87,7 @@ impl From<planet::PlanetMesh> for Mesh {
     }
 }
 
-fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>) {
+fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec<Vec3>>, Vec<Vec<u32>>) {
     let axis_a = local_up.yzx();
     let axis_b = local_up.cross(axis_a);
 
@@ -106,7 +118,7 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec3>, Vec<u32>) {
             }
         }
     }
-    (vertices, triangles)
+    (vec![vertices], vec![triangles])
 }
 
 fn sample_height_map(uv: Vec2, height_map: &Image) -> f32 {
