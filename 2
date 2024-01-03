@@ -5,24 +5,35 @@ use bevy::{
 };
 use std::f32::consts::PI;
 
+use crate::game_assets;
 use crate::planet;
 
 const HEIGHT_MAP_SCALE: f32 = 0.25;
 
-pub fn spawn_face(direction: Vec3, height_map: &Image) -> Mesh {
-    return Mesh::from(planet::PlanetMesh {
-        resolution: 50,
-        size: 1.0000001,
-        direction: direction,
-        height_map: height_map.clone(),
-    })
-    .with_generated_tangents()
-    .unwrap();
+pub fn spawn_face(
+    direction: Vec3,
+    loaded_images: &Res<Assets<Image>>,
+    height_assets: &Res<game_assets::HeightMapAssets>,
+) -> Option<Mesh> {
+    if let Some(height_map_image) = loaded_images.get(&height_assets.sample_height) {
+        return Some(
+            Mesh::from(planet::PlanetMesh {
+                resolution: 50,
+                size: 1.0,
+                height_map: height_map_image.clone(),
+                direction: direction,
+            })
+            .with_generated_tangents()
+            .unwrap(),
+        );
+    } else {
+        return None;
+    }
 }
 
 impl From<planet::PlanetMesh> for Mesh {
     fn from(planet: planet::PlanetMesh) -> Self {
-        let (vert_lists, triangle_lists): (Vec<Vec<Vec3>>, Vec<Vec<u32>>) =
+        let (vert_lists, triangle_lists, uvs): (Vec<Vec<Vec3>>, Vec<Vec<u32>>, Vec<[f32; 2]>) =
             face(planet.resolution, planet.direction, planet.size);
 
         let vertices = vert_lists
@@ -40,16 +51,6 @@ impl From<planet::PlanetMesh> for Mesh {
                 })
             })
             .collect::<Vec<u32>>();
-
-        let mut uvs: Vec<[f32; 2]> =
-            Vec::with_capacity((planet.resolution * planet.resolution) as usize);
-        for y in 0..planet.resolution {
-            for x in 0..planet.resolution {
-                let u = x as f32 / (planet.resolution - 1) as f32;
-                let v = y as f32 / (planet.resolution - 1) as f32;
-                uvs.push([u, v]);
-            }
-        }
 
         let deformed_vertices = vertices
             .iter()
@@ -77,7 +78,11 @@ impl From<planet::PlanetMesh> for Mesh {
     }
 }
 
-fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec<Vec3>>, Vec<Vec<u32>>) {
+fn face(
+    resolution: u32,
+    local_up: Vec3,
+    size: f32,
+) -> (Vec<Vec<Vec3>>, Vec<Vec<u32>>, Vec<[f32; 2]>) {
     let axis_a = local_up.yzx();
     let axis_b = local_up.cross(axis_a);
 
@@ -108,7 +113,41 @@ fn face(resolution: u32, local_up: Vec3, size: f32) -> (Vec<Vec<Vec3>>, Vec<Vec<
             }
         }
     }
-    (vec![vertices], vec![triangles])
+    let uvs: Vec<[f32; 2]> = vertices
+        .iter()
+        .map(|vertex| calculate_uv_for_face(*vertex, local_up, size))
+        .collect::<Vec<[f32; 2]>>();
+    (vec![vertices], vec![triangles], uvs)
+}
+
+fn calculate_uv_for_face(vertice: Vec3, direction: Vec3, size: f32) -> [f32; 2] {
+    let half_size = size / 2.0;
+    let mut u = 0.0;
+    let mut v = 0.0;
+    match direction {
+        [0, 1, 0] => {
+            u = (vertice.z + half_size) / size;
+            v = (vertice.x + half_size) / size;
+        }
+        [0, -1, 0] => {
+            u = (vertice.z + half_size) / size;
+            v = (half_size - vertice.x) / size;
+        }
+        [1, 0, 0] => {
+            u = (half_size - vertice.z) / size;
+            v = (vertice.y + half_size) / size;
+        }
+        _ => {}
+    }
+
+    if u >= 1.0 {
+        u -= 1.0;
+    }
+    if v >= 1.0 {
+        v -= 1.0;
+    }
+
+    [u, v]
 }
 
 fn sample_height_map(uv: Vec2, height_map: &Image) -> f32 {

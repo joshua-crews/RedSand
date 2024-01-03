@@ -32,6 +32,9 @@ impl Plugin for LoadingScreenPlugin {
             .add_collection_to_loading_state::<_, game_assets::ImageAssets>(
                 AppState::LoadingImageAssets,
             )
+            .add_collection_to_loading_state::<_, game_assets::ColorMapAssets>(
+                AppState::LoadingImageAssets
+            )
             .add_collection_to_loading_state::<_, game_assets::NormalMapAssets>(
                 AppState::LoadingImageAssets,
             )

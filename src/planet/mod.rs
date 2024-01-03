@@ -33,8 +33,8 @@ pub struct PlanetMaterial {
 pub struct PlanetMesh {
     pub resolution: u32,
     pub size: f32,
-    pub height_map: Image,
     pub direction: Vec3,
+    pub height_map: Image,
 }
 
 #[derive(Component)]
@@ -53,7 +53,7 @@ pub fn setup(
     mut planet_mats: ResMut<Assets<ExtendedMaterial<StandardMaterial, PlanetMaterial>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     loaded_images: Res<Assets<Image>>,
-    image_assets: Res<game_assets::ImageAssets>,
+    color_assets: Res<game_assets::ColorMapAssets>,
     normal_assets: Res<game_assets::NormalMapAssets>,
     height_assets: Res<game_assets::HeightMapAssets>,
     asset_server: Res<AssetServer>,
@@ -71,39 +71,70 @@ pub fn setup(
     });
 
     let directions = [
-        Vec3::Y,
-        Vec3::NEG_Y,
-        Vec3::NEG_X,
-        Vec3::X,
-        Vec3::Z,
-        Vec3::NEG_Z,
+        (Vec3::Y, "positive_y"),
+        (Vec3::NEG_Y, "negative_y"),
+        (Vec3::NEG_X, "negative_x"),
+        (Vec3::X, "positive_x"),
+        (Vec3::Z, "positive_z"),
+        (Vec3::NEG_Z, "negative_z"),
     ];
-    for direction in directions {
-        let planet_face = planet_mesh::spawn_face(direction, &loaded_images, &height_assets);
-        if let Some(checked_face) = planet_face {
-            let planet = (
-                MaterialMeshBundle {
-                    mesh: meshes.add(checked_face),
-                    material: planet_mats.add(ExtendedMaterial {
-                        base: StandardMaterial {
-                            base_color_texture: Some(image_assets.color_texture.clone()),
-                            perceptual_roughness: 0.4,
-                            normal_map_texture: Some(normal_assets.sample_normal.clone()),
-                            ..Default::default()
-                        },
-                        extension: PlanetMaterial {
-                            border_texture: Some(asset_server.load("saves/borders.png")),
-                        },
-                    }),
-                    ..default()
-                },
-                Wireframe,
-                WireframeColor {
-                    color: Color::BLACK,
-                },
-                camera_system::ThirdPersonCameraTarget,
-            );
-            commands.spawn(planet);
-        }
+
+    for (direction, suffix) in directions {
+        let height_handle = match suffix {
+            "positive_y" => &height_assets.positive_y,
+            "negative_y" => &height_assets.negative_y,
+            "negative_x" => &height_assets.negative_x,
+            "positive_x" => &height_assets.positive_x,
+            "positive_z" => &height_assets.positive_z,
+            "negative_z" => &height_assets.negative_z,
+            _ => continue,
+        };
+        let color_handle = match suffix {
+            "positive_y" => color_assets.positive_y.clone(),
+            "negative_y" => color_assets.negative_y.clone(),
+            "negative_x" => color_assets.negative_x.clone(),
+            "positive_x" => color_assets.positive_x.clone(),
+            "positive_z" => color_assets.positive_z.clone(),
+            "negative_z" => color_assets.negative_z.clone(),
+            _ => continue,
+        };
+
+        let normal_handle = match suffix {
+            "positive_y" => normal_assets.positive_y.clone(),
+            "negative_y" => normal_assets.negative_y.clone(),
+            "negative_x" => normal_assets.negative_x.clone(),
+            "positive_x" => normal_assets.positive_x.clone(),
+            "positive_z" => normal_assets.positive_z.clone(),
+            "negative_z" => normal_assets.negative_z.clone(),
+            _ => continue,
+        };
+        let height_map = loaded_images.get(height_handle).unwrap();
+
+        let planet_face = planet_mesh::spawn_face(direction, height_map);
+        let planet = (
+            MaterialMeshBundle {
+                mesh: meshes.add(planet_face),
+                material: planet_mats.add(ExtendedMaterial {
+                    base: StandardMaterial {
+                        base_color_texture: Some(color_handle),
+                        perceptual_roughness: 0.4,
+                        normal_map_texture: Some(normal_handle),
+                        ..Default::default()
+                    },
+                    extension: PlanetMaterial {
+                        border_texture: Some(asset_server.load("saves/borders.png")),
+                    },
+                }),
+                ..default()
+            },
+            /*
+            Wireframe,
+            WireframeColor {
+                color: Color::BLACK,
+            },
+            */
+            camera_system::ThirdPersonCameraTarget,
+        );
+        commands.spawn(planet);
     }
 }
