@@ -10,7 +10,7 @@ use bevy::{
     render::render_resource::AsBindGroup,
 };
 use bevy_asset_loader::asset_collection::AssetCollection;
-use image::RgbImage;
+use image::{DynamicImage, RgbImage, Rgba, RgbaImage};
 
 use crate::{camera_system, game_assets};
 
@@ -66,6 +66,7 @@ pub fn setup(
         });
     }
     let provinces_map = provinces::create_provinces_image(colors, MAP_WIDTH, MAP_HEIGHT);
+    let border_images = provinces::get_border_images(MAP_WIDTH, MAP_HEIGHT, &provinces_map);
     commands.insert_resource(MapImage {
         image: provinces_map,
     });
@@ -108,6 +109,21 @@ pub fn setup(
             "negative_z" => normal_assets.negative_z.clone(),
             _ => continue,
         };
+
+        let border_image = match suffix {
+            "positive_y" => border_images[5].clone(),
+            "negative_y" => border_images[4].clone(),
+            "negative_x" => border_images[3].clone(),
+            "positive_x" => border_images[1].clone(),
+            "positive_z" => border_images[0].clone(),
+            "negative_z" => border_images[2].clone(),
+            _ => continue,
+        };
+
+        let converted_border_image = bevy::render::texture::Image::from_dynamic(
+            DynamicImage::ImageRgba8(border_image.into()),
+            false,
+        );
         let height_map = loaded_images.get(height_handle).unwrap();
 
         let planet_face = planet_mesh::spawn_face(direction, height_map);
@@ -122,7 +138,7 @@ pub fn setup(
                         ..Default::default()
                     },
                     extension: PlanetMaterial {
-                        border_texture: Some(asset_server.load("saves/borders.png")),
+                        border_texture: Some(asset_server.add(converted_border_image)),
                     },
                 }),
                 ..default()

@@ -1,5 +1,8 @@
-use image::{Rgb, RgbImage, Rgba, RgbaImage};
+use image::{
+    imageops, DynamicImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage, Rgba, RgbaImage,
+};
 use rand::prelude::*;
+use std::f32::consts::PI;
 
 use super::noise;
 
@@ -86,7 +89,10 @@ pub fn create_provinces_image(
             }
         }
     }
+    return image;
+}
 
+pub fn get_border_images(width: u32, height: u32, image: &RgbImage) -> Vec<RgbaImage> {
     let mut border_image: RgbaImage = RgbaImage::new(width, height);
 
     for x in 0..width {
@@ -112,7 +118,95 @@ pub fn create_provinces_image(
             }
         }
     }
-    image.save("assets/saves/output.png").unwrap();
-    border_image.save("assets/saves/borders.png").unwrap();
-    return image;
+    let dynamic_image: DynamicImage = image::DynamicImage::ImageRgba8(border_image);
+    let mut border_images: Vec<RgbaImage> = Vec::with_capacity(6);
+    for face_id in 0..6 {
+        let cube_face = create_cube_map_face(&dynamic_image, face_id, 500, 500);
+        border_images.push(cube_face.clone());
+        cube_face
+            .save(&format!("assets/saves/cube_face_{}.png", face_id))
+            .expect("Failed saving image");
+    }
+
+    border_images[0] = imageops::rotate270(&border_images[0]);
+    border_images[0] = imageops::flip_horizontal(&border_images[0]);
+    border_images[1] = imageops::flip_horizontal(&border_images[1]);
+    border_images[2] = imageops::rotate90(&border_images[2]);
+    border_images[2] = imageops::flip_horizontal(&border_images[2]);
+    border_images[3] = imageops::flip_horizontal(&border_images[3]);
+    border_images[4] = imageops::flip_horizontal(&border_images[4]);
+    border_images[5] = imageops::flip_horizontal(&border_images[5]);
+    border_images[5] = imageops::rotate90(&border_images[5]);
+    return border_images;
+}
+
+fn create_cube_map_face(img: &DynamicImage, face_id: usize, width: u32, height: u32) -> RgbaImage {
+    //algorithm found here: https://stackoverflow.com/questions/29678510/convert-21-equirectangular-panorama-to-cube-map
+    let face_transforms = [
+        (0.0_f32, 0.0_f32),
+        (PI / 2.0, 0.0_f32),
+        (PI, 0.0_f32),
+        (-PI / 2.0, 0.0_f32),
+        (0.0_f32, -PI / 2.0),
+        (0.0_f32, PI / 2.0),
+    ];
+
+    let (ftu, ftv) = face_transforms[face_id];
+    let in_width = img.width() as f32;
+    let in_height = img.height() as f32;
+    let an = (PI / 4.0).sin();
+    let ak = (PI / 4.0).cos();
+
+    let mut face = RgbaImage::new(width, height);
+
+    for y in 0..height {
+        for x in 0..width {
+            let ny = y as f32 / height as f32 - 0.5;
+            let nx = x as f32 / width as f32 - 0.5;
+
+            let nx = nx * 2.0 * an;
+            let ny = ny * 2.0 * an;
+
+            let (u, v) = if ftv == 0.0 {
+                let u = nx.atan2(ak);
+                let v = (ny * u.cos()).atan2(ak);
+                (u + ftu, v)
+            } else if ftv > 0.0 {
+                let d = (nx * nx + ny * ny).sqrt();
+                let v = -((PI / 2.0 - d.atan2(ak)).cos().atan2(d));
+                let u = ny.atan2(nx);
+                (u, v)
+            } else {
+                let d = (nx * nx + ny * ny).sqrt();
+                let v = (PI / 2.0 - d.atan2(ak)).cos().atan2(d);
+                let u = nx.atan2(-ny);
+                (u, v)
+            };
+
+            let u = u / PI;
+            let v = v / (PI / 2.0);
+
+            let u = if u < -1.0 {
+                u + 2.0
+            } else if u > 1.0 {
+                u - 2.0
+            } else {
+                u
+            };
+            let v = if v < -1.0 {
+                v + 2.0
+            } else if v > 1.0 {
+                v - 2.0
+            } else {
+                v
+            };
+
+            let u = ((u + 1.0) * 0.5 * (in_width - 1.0)).round() as u32;
+            let v = ((v + 1.0) * 0.5 * (in_height - 1.0)).round() as u32;
+            let pixel = img.get_pixel(u.min(img.width() - 1), v.min(img.height() - 1));
+            face.put_pixel(x, y, pixel.to_rgba());
+        }
+    }
+
+    return face;
 }
