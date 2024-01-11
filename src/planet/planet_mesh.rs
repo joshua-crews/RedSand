@@ -3,7 +3,6 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-use std::f32::consts::PI;
 
 use crate::planet;
 

@@ -7,9 +7,7 @@ use bevy::{
     render::mesh::Mesh,
 };
 
-use crate::camera_system;
 use crate::game_assets;
-use crate::planet;
 use crate::skybox;
 
 pub fn setup(mut commands: Commands, image_assets: Res<game_assets::ImageAssets>) {

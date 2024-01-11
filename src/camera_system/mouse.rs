@@ -11,7 +11,7 @@ use bevy_mod_raycast::prelude::*;
 use crate::camera_system::ThirdPersonCamera;
 use crate::{camera_system, loading_screen::AppState::InGame, planet};
 
-use crate::planet::{MapImage, MAP_HEIGHT, MAP_WIDTH};
+use crate::planet::{MapImage, MAP_DIMENSIONS};
 
 #[derive(Resource)]
 pub struct CursorOverPlanet(bool);
@@ -85,8 +85,8 @@ fn planet_province_coordinates(
                 let u = 1.0 - (u_unwrapped % 1.0);
                 let v = 1.0 - ((phi + std::f32::consts::FRAC_PI_2) / PI);
 
-                let texture_x: u32 = (u * MAP_WIDTH as f32) as u32;
-                let texture_y: u32 = (v * MAP_HEIGHT as f32) as u32;
+                let texture_x: u32 = (u * MAP_DIMENSIONS as f32) as u32;
+                let texture_y: u32 = (v * MAP_DIMENSIONS as f32) as u32;
 
                 let r = map_image_query.image.get_pixel(texture_x, texture_y).0[0];
                 let g = map_image_query.image.get_pixel(texture_x, texture_y).0[1];

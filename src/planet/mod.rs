@@ -10,7 +10,7 @@ use bevy::{
     render::render_resource::AsBindGroup,
 };
 use bevy_asset_loader::asset_collection::AssetCollection;
-use image::{DynamicImage, RgbImage, Rgba, RgbaImage};
+use image::{DynamicImage, RgbImage};
 
 use crate::{camera_system, game_assets};
 
@@ -20,8 +20,7 @@ mod planet_mesh;
 mod provinces;
 
 const NUM_PROVINCES: usize = 120;
-pub const MAP_HEIGHT: u32 = 1080;
-pub const MAP_WIDTH: u32 = 1920;
+pub const MAP_DIMENSIONS: u32 = 300;
 
 #[derive(Asset, AssetCollection, Resource, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PlanetMaterial {
@@ -58,18 +57,21 @@ pub fn setup(
     height_assets: Res<game_assets::HeightMapAssets>,
     asset_server: Res<AssetServer>,
 ) {
-    let colors = provinces::create_province_colors(NUM_PROVINCES, MAP_WIDTH, MAP_HEIGHT);
-    for (province_id, color) in colors.iter().enumerate() {
+    let colors = provinces::create_province_colors(NUM_PROVINCES, MAP_DIMENSIONS);
+    let provinces_map = provinces::create_provinces_images(colors, MAP_DIMENSIONS);
+    let province_data = provinces::get_colors(&provinces_map);
+    for (province_id, color) in province_data.iter().enumerate() {
         commands.spawn(Province {
             id: province_id as i32,
-            color: color.0 .0,
+            color: color.0,
         });
     }
-    let provinces_map = provinces::create_provinces_image(colors, MAP_WIDTH, MAP_HEIGHT);
-    let border_images = provinces::get_border_images(MAP_WIDTH, MAP_HEIGHT, &provinces_map);
-    commands.insert_resource(MapImage {
-        image: provinces_map,
-    });
+    for province_map in &provinces_map {
+        commands.insert_resource(MapImage {
+            image: province_map.clone(),
+        })
+    }
+    let border_images = provinces::get_border_images(MAP_DIMENSIONS, &provinces_map);
 
     let directions = [
         (Vec3::Y, "positive_y"),
@@ -113,9 +115,9 @@ pub fn setup(
         let border_image = match suffix {
             "positive_y" => border_images[5].clone(),
             "negative_y" => border_images[4].clone(),
-            "negative_x" => border_images[3].clone(),
-            "positive_x" => border_images[1].clone(),
-            "positive_z" => border_images[0].clone(),
+            "negative_x" => border_images[1].clone(),
+            "positive_x" => border_images[0].clone(),
+            "positive_z" => border_images[3].clone(),
             "negative_z" => border_images[2].clone(),
             _ => continue,
         };
