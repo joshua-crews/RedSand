@@ -1,41 +1,16 @@
 use bevy::{
-    pbr::wireframe::{Wireframe, WireframeColor},
+    pbr::{
+        wireframe::{Wireframe, WireframeColor},
+        ExtendedMaterial,
+    },
     prelude::*,
+    render::mesh::Mesh,
 };
 
-use crate::camera_system;
-use crate::game_assets::ImageAssets;
-use crate::planet;
 use crate::skybox;
+use crate::{game_assets, loading_screen};
 
-pub fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut planet_materials: ResMut<Assets<planet::PlanetMaterial>>,
-    image_assets: Res<ImageAssets>,
-) {
-    let planet = (
-        MaterialMeshBundle {
-            mesh: meshes.add(Mesh::from(planet::PlanetMesh {
-                resolution: 20,
-                size: 1.0,
-            })),
-            material: planet_materials.add(planet::PlanetMaterial {
-                color_texture: Some(image_assets.color_texture.clone()),
-                border_texture: Some(image_assets.border_texture.clone()),
-            }),
-            ..default()
-        },
-        /*
-        Wireframe,
-        WireframeColor {
-            color: Color::BLACK,
-        },
-        */
-        camera_system::ThirdPersonCameraTarget,
-    );
-
-    commands.spawn(planet);
+pub fn setup(mut commands: Commands, image_assets: Res<game_assets::ImageAssets>) {
     commands.spawn(PointLightBundle {
         transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
         ..Default::default()

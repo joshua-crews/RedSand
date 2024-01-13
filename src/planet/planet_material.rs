@@ -1,8 +1,12 @@
 use crate::planet;
-use bevy::{prelude::*, render::render_resource::ShaderRef};
+use bevy::{pbr::MaterialExtension, render::render_resource::ShaderRef};
 
-impl Material for planet::PlanetMaterial {
+impl MaterialExtension for planet::PlanetMaterial {
     fn fragment_shader() -> ShaderRef {
+        "shaders/planet/planet.wgsl".into()
+    }
+
+    fn deferred_fragment_shader() -> ShaderRef {
         "shaders/planet/planet.wgsl".into()
     }
 }

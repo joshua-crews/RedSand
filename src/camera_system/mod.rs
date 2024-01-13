@@ -13,7 +13,7 @@ impl Plugin for ThirdPersonCameraPlugin {
             Update,
             (sync_player_camera
                 .after(orbit_mouse)
-                .run_if(in_state(loading_screen::AppState::TitleScreen)),),
+                .run_if(in_state(loading_screen::AppState::InGame)),),
         );
     }
 }

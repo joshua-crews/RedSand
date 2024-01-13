@@ -1806,7 +1806,11 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3831c2651acb5177cbd83943f3d9c8912c5ad03c76afcc0e9511ba568ec5ebb"
 dependencies = [
+ "fastrand 2.0.1",
  "futures-core",
+ "futures-io",
+ "memchr",
+ "parking",
  "pin-project-lite",
 ]
 
@@ -2996,10 +3000,10 @@ dependencies = [
  "bevy",
  "bevy_asset_loader",
  "bevy_mod_raycast",
+ "futures-lite 2.0.1",
  "image",
  "itertools",
  "rand",
- "unzip3",
 ]
 
 [[package]]
@@ -3538,12 +3542,6 @@ name = "unicode-xid"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
-
-[[package]]
-name = "unzip3"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99c0ec316ab08201476c032feb2f94a5c8ece5b209765c1fbc4430dd6e931ad6"
 
 [[package]]
 name = "uuid"

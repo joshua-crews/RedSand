@@ -9,9 +9,9 @@ use bevy::{
 use bevy_mod_raycast::prelude::*;
 
 use crate::camera_system::ThirdPersonCamera;
-use crate::{camera_system, loading_screen::AppState::TitleScreen, planet};
+use crate::{camera_system, loading_screen::AppState::InGame, planet};
 
-use crate::planet::{MapImage, MAP_HEIGHT, MAP_WIDTH};
+use crate::planet::{MapImage, MAP_DIMENSIONS};
 
 #[derive(Resource)]
 pub struct CursorOverPlanet(bool);
@@ -27,12 +27,12 @@ impl Plugin for MousePlugin {
             .add_systems(
                 Update,
                 (
-                    ray_cast_planet.run_if(in_state(TitleScreen)),
-                    orbit_mouse.run_if(in_state(TitleScreen)),
+                    ray_cast_planet.run_if(in_state(InGame)),
+                    orbit_mouse.run_if(in_state(InGame)),
                     zoom_mouse
-                        .run_if(in_state(TitleScreen))
+                        .run_if(in_state(InGame))
                         .run_if(camera_system::zoom_condition),
-                    planet_province_coordinates.run_if(in_state(TitleScreen)),
+                    planet_province_coordinates.run_if(in_state(InGame)),
                 )
                     .chain(),
             );
@@ -85,10 +85,8 @@ fn planet_province_coordinates(
                 let u = 1.0 - (u_unwrapped % 1.0);
                 let v = 1.0 - ((phi + std::f32::consts::FRAC_PI_2) / PI);
 
-                let texture_x: u32 = (u * MAP_WIDTH as f32) as u32;
-                let texture_y: u32 = (v * MAP_HEIGHT as f32) as u32;
-
-                println!("Texture x: {} y: {}", texture_x, texture_y);
+                let texture_x: u32 = (u * MAP_DIMENSIONS as f32) as u32;
+                let texture_y: u32 = (v * MAP_DIMENSIONS as f32) as u32;
 
                 let r = map_image_query.image.get_pixel(texture_x, texture_y).0[0];
                 let g = map_image_query.image.get_pixel(texture_x, texture_y).0[1];

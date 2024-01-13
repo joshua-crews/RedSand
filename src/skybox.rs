@@ -2,11 +2,7 @@ use bevy::{
     asset::LoadState,
     core_pipeline::Skybox,
     prelude::*,
-    render::{
-        render_resource::{TextureViewDescriptor, TextureViewDimension},
-        renderer::RenderDevice,
-        texture::CompressedImageFormats,
-    },
+    render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 
 use crate::game_assets::ImageAssets;
