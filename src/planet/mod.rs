@@ -10,7 +10,7 @@ use bevy::{
     render::render_resource::AsBindGroup,
 };
 use bevy_asset_loader::asset_collection::AssetCollection;
-use image::{DynamicImage, ImageBuffer, Rgb, RgbImage, RgbaImage};
+use image::{DynamicImage, Rgb, RgbImage, RgbaImage};
 
 use crate::{camera_system, game_assets};
 
@@ -21,6 +21,7 @@ mod provinces;
 
 const NUM_PROVINCES: usize = 120;
 pub const MAP_DIMENSIONS: u32 = 300;
+pub const PLANET_LODS: u32 = 4;
 
 #[derive(Asset, AssetCollection, Resource, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PlanetMaterial {
@@ -50,6 +51,11 @@ pub struct Province {
 #[derive(AssetCollection, Resource)]
 pub struct MapImage {
     pub image: RgbImage,
+}
+
+#[derive(Component)]
+pub struct PlanetLODs {
+    pub level_of_detail_meshes: Vec<Handle<Mesh>>,
 }
 
 pub async fn create_province_colors_async() -> Vec<(Rgb<u8>, u32, u32, u32)> {
@@ -134,10 +140,14 @@ pub fn setup(
         );
         let height_map = loaded_images.get(height_handle).unwrap();
 
-        let planet_face = planet_mesh::spawn_face(direction, height_map);
+        let mut faces: Vec<Handle<Mesh>> = Vec::with_capacity(PLANET_LODS as usize);
+        for res in 1..PLANET_LODS {
+            let planet_face = meshes.add(planet_mesh::spawn_face(direction, height_map, 90 * res));
+            faces.push(planet_face);
+        }
         let planet = (
             MaterialMeshBundle {
-                mesh: meshes.add(planet_face),
+                mesh: faces[0].clone(),
                 material: planet_mats.add(ExtendedMaterial {
                     base: StandardMaterial {
                         base_color_texture: Some(color_handle),
@@ -158,6 +168,9 @@ pub fn setup(
             },
             */
             camera_system::ThirdPersonCameraTarget,
+            PlanetLODs {
+                level_of_detail_meshes: faces,
+            },
         );
         commands.spawn(planet);
     }

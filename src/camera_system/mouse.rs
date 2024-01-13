@@ -169,17 +169,41 @@ pub fn orbit_mouse(
         cam.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, cam.zoom.radius));
 }
 
-fn zoom_mouse(mut scroll_evr: EventReader<MouseWheel>, mut cam_q: Query<&mut ThirdPersonCamera>) {
+fn zoom_mouse(
+    mut scroll_evr: EventReader<MouseWheel>,
+    mut cam_transform_q: Query<&Transform, With<ThirdPersonCamera>>, // Assuming we might need camera transform for calculating distance.
+    mut cam_q: Query<&mut ThirdPersonCamera>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut query: Query<(Entity, &Transform, &planet::PlanetLODs)>, // Fixed type PlanetLODs used in query.
+) {
     let mut scroll: f32 = 0.0;
     for ev in scroll_evr.read() {
         scroll += ev.y;
     }
 
-    if let Ok(mut cam) = cam_q.get_single_mut() {
+    if let (Ok(mut cam), Ok(camera_transform)) =
+        (cam_q.get_single_mut(), cam_transform_q.get_single())
+    {
         if scroll.abs() > 0.0 {
             let new_radius: f32 =
                 cam.zoom.radius - scroll * cam.zoom.radius * 0.1 * cam.zoom_sensitivity;
             cam.zoom.radius = new_radius.clamp(cam.zoom.min, cam.zoom.max);
+        }
+
+        for (entity, transform, planet_lods) in query.iter() {
+            // Assuming distance is calculated here
+            let distance = transform.translation.distance(camera_transform.translation);
+
+            if !planet_lods.level_of_detail_meshes.is_empty() {
+                let lod_index = ((distance - cam.zoom.min) / (cam.zoom.max - cam.zoom.min)
+                    * (planet_lods.level_of_detail_meshes.len() as f32))
+                    .clamp(0.0, (planet_lods.level_of_detail_meshes.len() - 1) as f32)
+                    as usize;
+                let reversed_lod_index = planet_lods.level_of_detail_meshes.len() - 1 - lod_index;
+                let handle = planet_lods.level_of_detail_meshes[reversed_lod_index].clone();
+                commands.entity(entity).insert(handle);
+            }
         }
     }
 }

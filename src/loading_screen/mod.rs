@@ -1,12 +1,10 @@
 use bevy::{
-    ecs::system::{CommandQueue, SystemState},
     prelude::*,
-    tasks::{block_on, AsyncComputeTaskPool, Task},
+    tasks::{AsyncComputeTaskPool, Task},
 };
 
 use image::{Rgb, RgbImage, RgbaImage};
 
-use bevy::ecs::system::SystemParam;
 use bevy_asset_loader::prelude::*;
 use futures_lite::future;
 

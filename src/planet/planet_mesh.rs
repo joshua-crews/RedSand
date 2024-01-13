@@ -8,10 +8,10 @@ use crate::planet;
 
 const HEIGHT_MAP_SCALE: f32 = 0.25;
 
-pub fn spawn_face(direction: Vec3, height_map: &Image) -> Mesh {
+pub fn spawn_face(direction: Vec3, height_map: &Image, resolution: u32) -> Mesh {
     return Mesh::from(planet::PlanetMesh {
-        resolution: 50,
-        size: 1.0000001,
+        resolution: resolution,
+        size: 1.0,
         direction: direction,
         height_map: height_map.clone(),
     })
