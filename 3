@@ -4,8 +4,6 @@ use bevy::{
     tasks::{block_on, AsyncComputeTaskPool, Task},
 };
 
-use image::{Rgb, RgbImage, RgbaImage};
-
 use bevy::ecs::system::SystemParam;
 use bevy_asset_loader::prelude::*;
 use futures_lite::future;
@@ -17,7 +15,7 @@ use crate::setup;
 use crate::skybox;
 
 #[derive(Component)]
-struct ComputeMeshesComponent(Task<(Vec<RgbImage>, Vec<Rgb<u8>>, Vec<RgbaImage>)>);
+struct ComputeMeshesComponent(Task<CommandQueue>);
 
 #[derive(Component)]
 struct LoadingScreenComponent;
@@ -26,10 +24,11 @@ pub struct LoadingScreenPlugin;
 
 impl Plugin for LoadingScreenPlugin {
     fn build(&self, app: &mut App) {
+        //let generate_meshes_instructions = (planet::setup, skybox::build_skybox, setup::setup).chain();
         app.add_state::<AppState>()
             .add_loading_state(
                 LoadingState::new(AppState::LoadingImageAssets)
-                    .continue_to_state(AppState::GeneratingMaps),
+                    .continue_to_state(AppState::GeneratingMeshes),
             )
             .add_collection_to_loading_state::<_, game_assets::ImageAssets>(
                 AppState::LoadingImageAssets,
@@ -45,20 +44,13 @@ impl Plugin for LoadingScreenPlugin {
             )
             .add_systems(OnEnter(AppState::LoadingImageAssets), loading_screen)
             //.add_systems(OnEnter(AppState::GeneratingMeshes), generate_meshes_instructions)
-            .add_systems(OnEnter(AppState::GeneratingMaps), setup_maps)
             .add_systems(
-                Update,
-                handle_map_generation_tasks.run_if(in_state(AppState::GeneratingMaps)),
+                OnEnter(AppState::GeneratingMeshes),
+                setup_meshes.run_if(in_state(AppState::GeneratingMeshes)),
             )
             .add_systems(
-                OnEnter(AppState::SpawningMeshes),
-                (
-                    planet::setup,
-                    skybox::build_skybox,
-                    setup::setup,
-                    finish_mesh_spawning,
-                )
-                    .chain(),
+                Update,
+                handle_mesh_generation_tasks.run_if(in_state(AppState::GeneratingMeshes)),
             )
             .add_systems(OnEnter(AppState::InGame), enter_game)
             .add_systems(
@@ -71,49 +63,30 @@ impl Plugin for LoadingScreenPlugin {
     }
 }
 
-fn setup_maps(mut commands: Commands) {
+fn setup_meshes(mut commands: Commands, image_assets: Res<game_assets::ImageAssets>) {
     let thread_pool = AsyncComputeTaskPool::get();
     let task = thread_pool.spawn(async move {
-        let colors = planet::create_province_colors_async().await;
-        let provinces_map = planet::create_province_images_async(colors).await;
-        let province_data = planet::create_province_data_async(provinces_map.clone()).await;
-        let border_data = planet::create_border_images_async(provinces_map.clone()).await;
-        return (provinces_map, province_data, border_data);
+        let mut command_queue = CommandQueue::default();
+        let mut world = World::default();
+        let planet = world.register_system(planet::setup);
+        world.run_system(planet);
+        command_queue.push(move |world: &mut World| {});
+        CommandQueue::default()
     });
 
     commands.spawn(()).insert(ComputeMeshesComponent(task));
 }
 
-fn handle_map_generation_tasks(
+fn handle_mesh_generation_tasks(
+    mut tasks: Query<&mut ComputeMeshesComponent>,
     mut commands: Commands,
-    mut tasks: Query<(Entity, &mut ComputeMeshesComponent)>,
-    mut state: ResMut<NextState<AppState>>,
 ) {
-    for (entity, mut task_component) in tasks.iter_mut() {
-        let future = future::block_on(future::poll_once(&mut task_component.0));
-        if let Some((provinces_map, province_data, border_data)) = future {
-            for (province_id, color) in province_data.iter().enumerate() {
-                commands.spawn(planet::Province {
-                    id: province_id as i32,
-                    color: color.0,
-                });
-            }
-            for province_map in &provinces_map {
-                commands.insert_resource(planet::MapImage {
-                    image: province_map.clone(),
-                })
-            }
-            commands.insert_resource(planet::BorderImages {
-                border_images: border_data,
-            });
-            commands.entity(entity).remove::<ComputeMeshesComponent>();
-            state.set(AppState::SpawningMeshes);
+    for mut task in &mut tasks {
+        if let Some(mut commands_queue) = block_on(future::poll_once(&mut task.0)) {
+            println!("Finished computing meshes!");
+            commands.append(&mut commands_queue);
         }
     }
-}
-
-fn finish_mesh_spawning(mut state: ResMut<NextState<AppState>>) {
-    state.set(AppState::InGame);
 }
 
 fn enter_game(
@@ -166,11 +139,10 @@ fn close_on_esc(
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
 pub enum AppState {
     #[default]
     LoadingImageAssets,
-    GeneratingMaps,
-    SpawningMeshes,
+    GeneratingMeshes,
     InGame,
 }

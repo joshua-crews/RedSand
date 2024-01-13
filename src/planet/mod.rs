@@ -10,7 +10,7 @@ use bevy::{
     render::render_resource::AsBindGroup,
 };
 use bevy_asset_loader::asset_collection::AssetCollection;
-use image::{DynamicImage, RgbImage};
+use image::{DynamicImage, ImageBuffer, Rgb, RgbImage, RgbaImage};
 
 use crate::{camera_system, game_assets};
 
@@ -27,6 +27,11 @@ pub struct PlanetMaterial {
     #[texture(100)]
     #[sampler(101)]
     pub border_texture: Option<Handle<Image>>,
+}
+
+#[derive(Resource, Debug)]
+pub struct BorderImages {
+    pub border_images: Vec<RgbaImage>,
 }
 
 pub struct PlanetMesh {
@@ -47,32 +52,33 @@ pub struct MapImage {
     pub image: RgbImage,
 }
 
+pub async fn create_province_colors_async() -> Vec<(Rgb<u8>, u32, u32, u32)> {
+    return provinces::create_province_colors(NUM_PROVINCES, MAP_DIMENSIONS);
+}
+
+pub async fn create_province_images_async(colors: Vec<(Rgb<u8>, u32, u32, u32)>) -> Vec<RgbImage> {
+    return provinces::create_provinces_images(colors, MAP_DIMENSIONS);
+}
+
+pub async fn create_province_data_async(province_map: Vec<RgbImage>) -> Vec<Rgb<u8>> {
+    return provinces::get_colors(&province_map);
+}
+
+pub async fn create_border_images_async(provinces_map: Vec<RgbImage>) -> Vec<RgbaImage> {
+    return provinces::get_border_images(MAP_DIMENSIONS, &provinces_map);
+}
+
 pub fn setup(
     mut commands: Commands,
     mut planet_mats: ResMut<Assets<ExtendedMaterial<StandardMaterial, PlanetMaterial>>>,
     mut meshes: ResMut<Assets<Mesh>>,
     loaded_images: Res<Assets<Image>>,
+    border_images: Res<BorderImages>,
     color_assets: Res<game_assets::ColorMapAssets>,
     normal_assets: Res<game_assets::NormalMapAssets>,
     height_assets: Res<game_assets::HeightMapAssets>,
     asset_server: Res<AssetServer>,
 ) {
-    let colors = provinces::create_province_colors(NUM_PROVINCES, MAP_DIMENSIONS);
-    let provinces_map = provinces::create_provinces_images(colors, MAP_DIMENSIONS);
-    let province_data = provinces::get_colors(&provinces_map);
-    for (province_id, color) in province_data.iter().enumerate() {
-        commands.spawn(Province {
-            id: province_id as i32,
-            color: color.0,
-        });
-    }
-    for province_map in &provinces_map {
-        commands.insert_resource(MapImage {
-            image: province_map.clone(),
-        })
-    }
-    let border_images = provinces::get_border_images(MAP_DIMENSIONS, &provinces_map);
-
     let directions = [
         (Vec3::Y, "positive_y"),
         (Vec3::NEG_Y, "negative_y"),
@@ -113,12 +119,12 @@ pub fn setup(
         };
 
         let border_image = match suffix {
-            "positive_y" => border_images[5].clone(),
-            "negative_y" => border_images[4].clone(),
-            "negative_x" => border_images[1].clone(),
-            "positive_x" => border_images[0].clone(),
-            "positive_z" => border_images[3].clone(),
-            "negative_z" => border_images[2].clone(),
+            "positive_y" => border_images.border_images[5].clone(),
+            "negative_y" => border_images.border_images[4].clone(),
+            "negative_x" => border_images.border_images[1].clone(),
+            "positive_x" => border_images.border_images[0].clone(),
+            "positive_z" => border_images.border_images[3].clone(),
+            "negative_z" => border_images.border_images[2].clone(),
             _ => continue,
         };
 
