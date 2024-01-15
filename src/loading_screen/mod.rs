@@ -15,7 +15,10 @@ use crate::setup;
 use crate::skybox;
 
 #[derive(Component)]
-struct ComputeMeshesComponent(Task<(Vec<RgbImage>, Vec<Rgb<u8>>, Vec<RgbaImage>)>);
+struct ComputeMapsComponent(Task<(Vec<RgbImage>, Vec<Rgb<u8>>, Vec<RgbaImage>)>);
+
+#[derive(Component)]
+struct ComputeMeshesComponent(Task<(Vec3, String, Vec<Mesh>)>);
 
 #[derive(Component)]
 struct LoadingScreenComponent;
@@ -42,19 +45,23 @@ impl Plugin for LoadingScreenPlugin {
                 AppState::LoadingImageAssets,
             )
             .add_systems(OnEnter(AppState::LoadingImageAssets), loading_screen)
-            //.add_systems(OnEnter(AppState::GeneratingMeshes), generate_meshes_instructions)
             .add_systems(OnEnter(AppState::GeneratingMaps), setup_maps)
             .add_systems(
                 Update,
                 handle_map_generation_tasks.run_if(in_state(AppState::GeneratingMaps)),
             )
+            .add_systems(OnEnter(AppState::GeneratingMeshes), setup_meshes)
             .add_systems(
-                OnEnter(AppState::SpawningMeshes),
+                Update,
+                handle_mesh_generation_tasks.run_if(in_state(AppState::GeneratingMeshes)),
+            )
+            .add_systems(
+                OnEnter(AppState::SpawningGameEntities),
                 (
                     planet::setup,
                     skybox::build_skybox,
                     setup::setup,
-                    finish_mesh_spawning,
+                    finish_entity_spawning,
                 )
                     .chain(),
             )
@@ -69,6 +76,79 @@ impl Plugin for LoadingScreenPlugin {
     }
 }
 
+fn setup_meshes(
+    mut commands: Commands,
+    height_assets: Res<game_assets::HeightMapAssets>,
+    loaded_images: Res<Assets<Image>>,
+) {
+    let thread_pool = AsyncComputeTaskPool::get();
+    commands.insert_resource(planet::PlanetLODs {
+        level_of_detail_meshes: Vec::new(),
+    });
+    let directions = [
+        (Vec3::Y, "positive_y"),
+        (Vec3::NEG_Y, "negative_y"),
+        (Vec3::NEG_X, "negative_x"),
+        (Vec3::X, "positive_x"),
+        (Vec3::Z, "positive_z"),
+        (Vec3::NEG_Z, "negative_z"),
+    ];
+
+    for (direction, suffix) in directions {
+        let height_handle = match suffix {
+            "positive_y" => &height_assets.positive_y,
+            "negative_y" => &height_assets.negative_y,
+            "negative_x" => &height_assets.negative_x,
+            "positive_x" => &height_assets.positive_x,
+            "positive_z" => &height_assets.positive_z,
+            "negative_z" => &height_assets.negative_z,
+            _ => continue,
+        };
+        let height_handle_clone = height_handle.clone();
+        let height_map_clone = loaded_images.get(height_handle_clone).unwrap().clone();
+
+        let task = thread_pool.spawn(async move {
+            let mut faces: Vec<Mesh> = Vec::with_capacity(planet::PLANET_LODS as usize);
+            for res in 1..(planet::PLANET_LODS - 1) {
+                let planet_face = planet::spawn_face(direction, &height_map_clone, 10 * res);
+                faces.push(planet_face);
+            }
+            let planet_face = planet::spawn_face(direction, &height_map_clone, 90);
+            faces.push(planet_face);
+            return (direction, suffix.to_owned(), faces);
+        });
+
+        commands.spawn(()).insert(ComputeMeshesComponent(task));
+    }
+}
+
+fn handle_mesh_generation_tasks(
+    mut commands: Commands,
+    mut tasks: Query<(Entity, &mut ComputeMeshesComponent)>,
+    mut state: ResMut<NextState<AppState>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut planet_lods: ResMut<planet::PlanetLODs>,
+) {
+    for (entity, mut task_component) in tasks.iter_mut() {
+        let future = future::block_on(future::poll_once(&mut task_component.0));
+        if let Some((direction, suffix, planet_lods_computed)) = future {
+            let mut handle_faces: Vec<Handle<Mesh>> =
+                Vec::with_capacity(planet_lods_computed.len());
+            for face in planet_lods_computed {
+                handle_faces.push(meshes.add(face));
+            }
+            planet_lods
+                .level_of_detail_meshes
+                .push((direction, suffix, handle_faces));
+            commands.entity(entity).despawn();
+        }
+    }
+    if tasks.iter().count() <= 0 {
+        info!(target: "red_sand::loading_state::systems", "Loading state 'red_sand::loading_screen::AppState::GeneratingMeshes' is done");
+        state.set(AppState::SpawningGameEntities);
+    }
+}
+
 fn setup_maps(mut commands: Commands) {
     let thread_pool = AsyncComputeTaskPool::get();
     let task = thread_pool.spawn(async move {
@@ -79,12 +159,12 @@ fn setup_maps(mut commands: Commands) {
         return (provinces_map, province_data, border_data);
     });
 
-    commands.spawn(()).insert(ComputeMeshesComponent(task));
+    commands.spawn(()).insert(ComputeMapsComponent(task));
 }
 
 fn handle_map_generation_tasks(
     mut commands: Commands,
-    mut tasks: Query<(Entity, &mut ComputeMeshesComponent)>,
+    mut tasks: Query<(Entity, &mut ComputeMapsComponent)>,
     mut state: ResMut<NextState<AppState>>,
 ) {
     for (entity, mut task_component) in tasks.iter_mut() {
@@ -104,13 +184,14 @@ fn handle_map_generation_tasks(
             commands.insert_resource(planet::BorderImages {
                 border_images: border_data,
             });
-            commands.entity(entity).remove::<ComputeMeshesComponent>();
-            state.set(AppState::SpawningMeshes);
+            commands.entity(entity).remove::<ComputeMapsComponent>();
+            info!(target: "red_sand::loading_state::systems", "Loading state 'red_sand::loading_screen::AppState::GeneratingMaps' is done");
+            state.set(AppState::GeneratingMeshes);
         }
     }
 }
 
-fn finish_mesh_spawning(mut state: ResMut<NextState<AppState>>) {
+fn finish_entity_spawning(mut state: ResMut<NextState<AppState>>) {
     state.set(AppState::InGame);
 }
 
@@ -169,6 +250,7 @@ pub enum AppState {
     #[default]
     LoadingImageAssets,
     GeneratingMaps,
-    SpawningMeshes,
+    GeneratingMeshes,
+    SpawningGameEntities,
     InGame,
 }

@@ -3003,6 +3003,7 @@ dependencies = [
  "futures-lite 2.0.1",
  "image",
  "itertools",
+ "log",
  "rand",
 ]
 

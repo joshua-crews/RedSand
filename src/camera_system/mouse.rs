@@ -171,11 +171,11 @@ pub fn orbit_mouse(
 
 fn zoom_mouse(
     mut scroll_evr: EventReader<MouseWheel>,
-    mut cam_transform_q: Query<&Transform, With<ThirdPersonCamera>>, // Assuming we might need camera transform for calculating distance.
     mut cam_q: Query<&mut ThirdPersonCamera>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut query: Query<(Entity, &Transform, &planet::PlanetLODs)>, // Fixed type PlanetLODs used in query.
+    cam_transform_q: Query<&Transform, With<ThirdPersonCamera>>,
+    query: Query<(Entity, &Transform, &planet::PlanetEntity)>,
+    planet_lods: Res<planet::PlanetLODs>,
 ) {
     let mut scroll: f32 = 0.0;
     for ev in scroll_evr.read() {
@@ -191,18 +191,24 @@ fn zoom_mouse(
             cam.zoom.radius = new_radius.clamp(cam.zoom.min, cam.zoom.max);
         }
 
-        for (entity, transform, planet_lods) in query.iter() {
-            // Assuming distance is calculated here
+        for (entity, transform, planet_mesh) in query.iter() {
             let distance = transform.translation.distance(camera_transform.translation);
-
-            if !planet_lods.level_of_detail_meshes.is_empty() {
+            if !planet_lods.level_of_detail_meshes[0].2.is_empty() {
+                let num_lods = planet_lods.level_of_detail_meshes[0].2.len();
                 let lod_index = ((distance - cam.zoom.min) / (cam.zoom.max - cam.zoom.min)
-                    * (planet_lods.level_of_detail_meshes.len() as f32))
-                    .clamp(0.0, (planet_lods.level_of_detail_meshes.len() - 1) as f32)
-                    as usize;
-                let reversed_lod_index = planet_lods.level_of_detail_meshes.len() - 1 - lod_index;
-                let handle = planet_lods.level_of_detail_meshes[reversed_lod_index].clone();
-                commands.entity(entity).insert(handle);
+                    * (num_lods as f32))
+                    .clamp(0.0, (num_lods - 1) as f32) as usize;
+                let reversed_lod_index = num_lods - 1 - lod_index;
+                let mut handle: Option<Handle<Mesh>> = None;
+                for (_direction, suffix_dir, lods) in planet_lods.level_of_detail_meshes.iter() {
+                    if suffix_dir == &planet_mesh.direction {
+                        handle = Some(lods[reversed_lod_index].clone());
+                        break;
+                    }
+                }
+                if let Some(pulled_handle) = handle {
+                    commands.entity(entity).insert(pulled_handle);
+                }
             }
         }
     }

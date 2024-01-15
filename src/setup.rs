@@ -1,11 +1,4 @@
-use bevy::{
-    pbr::{
-        wireframe::{Wireframe, WireframeColor},
-        ExtendedMaterial,
-    },
-    prelude::*,
-    render::mesh::Mesh,
-};
+use bevy::prelude::*;
 
 use crate::game_assets;
 use crate::skybox;

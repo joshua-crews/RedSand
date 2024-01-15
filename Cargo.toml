@@ -13,3 +13,4 @@ image = { version = "0.24.7", features = [] }
 rand = "0.8.5"
 bevy_asset_loader = "0.18.0"
 futures-lite = "2.0.1"
+log = "0.4.20"
