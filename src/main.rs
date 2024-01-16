@@ -1,4 +1,5 @@
 mod camera_system;
+mod config_parser;
 mod game_assets;
 mod loading_screen;
 mod planet;

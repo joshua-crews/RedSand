@@ -21,10 +21,6 @@ mod planet_material;
 mod planet_mesh;
 mod provinces;
 
-const NUM_PROVINCES: usize = 120;
-pub const MAP_DIMENSIONS: u32 = 300;
-pub const PLANET_LODS: u32 = 4;
-
 #[derive(Asset, AssetCollection, Resource, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PlanetMaterial {
     #[texture(100)]
@@ -65,20 +61,29 @@ pub struct PlanetLODs {
     pub level_of_detail_meshes: Vec<(Vec3, String, Vec<Handle<Mesh>>)>,
 }
 
-pub async fn create_province_colors_async() -> Vec<(Rgb<u8>, u32, u32, u32)> {
-    return provinces::create_province_colors(NUM_PROVINCES, MAP_DIMENSIONS);
+pub async fn create_province_colors_async(
+    num_provinces: u32,
+    map_dimensions: u32,
+) -> Vec<(Rgb<u8>, u32, u32, u32)> {
+    return provinces::create_province_colors(num_provinces as usize, map_dimensions);
 }
 
-pub async fn create_province_images_async(colors: Vec<(Rgb<u8>, u32, u32, u32)>) -> Vec<RgbImage> {
-    return provinces::create_provinces_images(colors, MAP_DIMENSIONS);
+pub async fn create_province_images_async(
+    colors: Vec<(Rgb<u8>, u32, u32, u32)>,
+    map_dimensions: u32,
+) -> Vec<RgbImage> {
+    return provinces::create_provinces_images(colors, map_dimensions);
 }
 
 pub async fn create_province_data_async(province_map: Vec<RgbImage>) -> Vec<Rgb<u8>> {
     return provinces::get_colors(&province_map);
 }
 
-pub async fn create_border_images_async(provinces_map: Vec<RgbImage>) -> Vec<RgbaImage> {
-    return provinces::get_border_images(MAP_DIMENSIONS, &provinces_map);
+pub async fn create_border_images_async(
+    provinces_map: Vec<RgbImage>,
+    map_dimensions: u32,
+) -> Vec<RgbaImage> {
+    return provinces::get_border_images(map_dimensions, &provinces_map);
 }
 
 pub fn setup(

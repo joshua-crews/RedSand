@@ -9,6 +9,7 @@ use bevy_asset_loader::prelude::*;
 use futures_lite::future;
 
 use crate::camera_system;
+use crate::config_parser;
 use crate::game_assets;
 use crate::planet;
 use crate::setup;
@@ -28,6 +29,14 @@ pub struct LoadingScreenPlugin;
 impl Plugin for LoadingScreenPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<AppState>()
+            .add_loading_state(
+                LoadingState::new(AppState::LoadingConfigs)
+                    .continue_to_state(AppState::LoadingImageAssets),
+            )
+            .add_systems(
+                OnEnter(AppState::LoadingConfigs),
+                config_parser::read_configs,
+            )
             .add_loading_state(
                 LoadingState::new(AppState::LoadingImageAssets)
                     .continue_to_state(AppState::GeneratingMaps),
@@ -80,6 +89,7 @@ fn setup_meshes(
     mut commands: Commands,
     height_assets: Res<game_assets::HeightMapAssets>,
     loaded_images: Res<Assets<Image>>,
+    engine_config: Res<config_parser::EngineConfig>,
 ) {
     let thread_pool = AsyncComputeTaskPool::get();
     commands.insert_resource(planet::PlanetLODs {
@@ -106,15 +116,14 @@ fn setup_meshes(
         };
         let height_handle_clone = height_handle.clone();
         let height_map_clone = loaded_images.get(height_handle_clone).unwrap().clone();
+        let planet_lods = engine_config.planet_lods.clone();
 
         let task = thread_pool.spawn(async move {
-            let mut faces: Vec<Mesh> = Vec::with_capacity(planet::PLANET_LODS as usize);
-            for res in 1..(planet::PLANET_LODS - 1) {
-                let planet_face = planet::spawn_face(direction, &height_map_clone, 10 * res);
+            let mut faces: Vec<Mesh> = Vec::with_capacity(planet_lods.len() as usize);
+            for res in planet_lods {
+                let planet_face = planet::spawn_face(direction, &height_map_clone, res);
                 faces.push(planet_face);
             }
-            let planet_face = planet::spawn_face(direction, &height_map_clone, 90);
-            faces.push(planet_face);
             return (direction, suffix.to_owned(), faces);
         });
 
@@ -149,13 +158,16 @@ fn handle_mesh_generation_tasks(
     }
 }
 
-fn setup_maps(mut commands: Commands) {
+fn setup_maps(mut commands: Commands, engine_config: Res<config_parser::EngineConfig>) {
     let thread_pool = AsyncComputeTaskPool::get();
+    let num_provinces: u32 = engine_config.num_provinces;
+    let map_dimensions: u32 = engine_config.map_dimensions;
     let task = thread_pool.spawn(async move {
-        let colors = planet::create_province_colors_async().await;
-        let provinces_map = planet::create_province_images_async(colors).await;
+        let colors = planet::create_province_colors_async(num_provinces, map_dimensions).await;
+        let provinces_map = planet::create_province_images_async(colors, map_dimensions).await;
         let province_data = planet::create_province_data_async(provinces_map.clone()).await;
-        let border_data = planet::create_border_images_async(provinces_map.clone()).await;
+        let border_data =
+            planet::create_border_images_async(provinces_map.clone(), map_dimensions).await;
         return (provinces_map, province_data, border_data);
     });
 
@@ -248,6 +260,7 @@ fn close_on_esc(
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
     #[default]
+    LoadingConfigs,
     LoadingImageAssets,
     GeneratingMaps,
     GeneratingMeshes,
