@@ -9,9 +9,10 @@ use bevy::{
 use bevy_mod_raycast::prelude::*;
 
 use crate::camera_system::ThirdPersonCamera;
+use crate::config_parser;
 use crate::{camera_system, loading_screen::AppState::InGame, planet};
 
-use crate::planet::{MapImage, MAP_DIMENSIONS};
+use crate::planet::MapImage;
 
 #[derive(Resource)]
 pub struct CursorOverPlanet(bool);
@@ -67,6 +68,7 @@ fn planet_province_coordinates(
     planet_q: Query<&Transform, With<camera_system::ThirdPersonCameraTarget>>,
     provinces_query: Query<&planet::Province>,
     map_image_query: Res<MapImage>,
+    engine_config: Res<config_parser::EngineConfig>,
 ) {
     if let Some(cursor_ray) = **cursor_ray {
         let val: &[(Entity, IntersectionData)] = raycast.cast_ray(cursor_ray, &default());
@@ -85,8 +87,8 @@ fn planet_province_coordinates(
                 let u = 1.0 - (u_unwrapped % 1.0);
                 let v = 1.0 - ((phi + std::f32::consts::FRAC_PI_2) / PI);
 
-                let texture_x: u32 = (u * MAP_DIMENSIONS as f32) as u32;
-                let texture_y: u32 = (v * MAP_DIMENSIONS as f32) as u32;
+                let texture_x: u32 = (u * engine_config.map_dimensions as f32) as u32;
+                let texture_y: u32 = (v * engine_config.map_dimensions as f32) as u32;
 
                 let r = map_image_query.image.get_pixel(texture_x, texture_y).0[0];
                 let g = map_image_query.image.get_pixel(texture_x, texture_y).0[1];
@@ -169,17 +171,47 @@ pub fn orbit_mouse(
         cam.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, cam.zoom.radius));
 }
 
-fn zoom_mouse(mut scroll_evr: EventReader<MouseWheel>, mut cam_q: Query<&mut ThirdPersonCamera>) {
+fn zoom_mouse(
+    mut scroll_evr: EventReader<MouseWheel>,
+    mut cam_q: Query<&mut ThirdPersonCamera>,
+    mut commands: Commands,
+    cam_transform_q: Query<&Transform, With<ThirdPersonCamera>>,
+    query: Query<(Entity, &Transform, &planet::PlanetEntity)>,
+    planet_lods: Res<planet::PlanetLODs>,
+) {
     let mut scroll: f32 = 0.0;
     for ev in scroll_evr.read() {
         scroll += ev.y;
     }
 
-    if let Ok(mut cam) = cam_q.get_single_mut() {
+    if let (Ok(mut cam), Ok(camera_transform)) =
+        (cam_q.get_single_mut(), cam_transform_q.get_single())
+    {
         if scroll.abs() > 0.0 {
             let new_radius: f32 =
                 cam.zoom.radius - scroll * cam.zoom.radius * 0.1 * cam.zoom_sensitivity;
             cam.zoom.radius = new_radius.clamp(cam.zoom.min, cam.zoom.max);
+        }
+
+        for (entity, transform, planet_mesh) in query.iter() {
+            let distance = transform.translation.distance(camera_transform.translation);
+            if !planet_lods.level_of_detail_meshes[0].2.is_empty() {
+                let num_lods = planet_lods.level_of_detail_meshes[0].2.len();
+                let lod_index = ((distance - cam.zoom.min) / (cam.zoom.max - cam.zoom.min)
+                    * (num_lods as f32))
+                    .clamp(0.0, (num_lods - 1) as f32) as usize;
+                let reversed_lod_index = num_lods - 1 - lod_index;
+                let mut handle: Option<Handle<Mesh>> = None;
+                for (_direction, suffix_dir, lods) in planet_lods.level_of_detail_meshes.iter() {
+                    if suffix_dir == &planet_mesh.direction {
+                        handle = Some(lods[reversed_lod_index].clone());
+                        break;
+                    }
+                }
+                if let Some(pulled_handle) = handle {
+                    commands.entity(entity).insert(pulled_handle);
+                }
+            }
         }
     }
 }

@@ -1,0 +1,18 @@
+---
+# Config options for engine based computations such as province resolution
+
+# Each iterative level of detail of the planet, minimum of resolution of 2+
+# Minimum number of lods is 1 level of detail
+planet_lods:
+  - 10
+  - 30
+  - 50
+  - 100
+
+# The rendered texture dimensions for internal map handling
+# Each resolution added further slows app boot time but provides more fidelity
+map_dimensions: 300
+
+# The maximum number of province instances to be generated
+# There is no promise the noise will allow all those points to be used however, so it is only a maximum
+num_provinces: 50

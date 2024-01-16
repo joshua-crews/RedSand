@@ -1,14 +1,7 @@
-use bevy::{
-    pbr::{
-        wireframe::{Wireframe, WireframeColor},
-        ExtendedMaterial,
-    },
-    prelude::*,
-    render::mesh::Mesh,
-};
+use bevy::prelude::*;
 
+use crate::game_assets;
 use crate::skybox;
-use crate::{game_assets, loading_screen};
 
 pub fn setup(mut commands: Commands, image_assets: Res<game_assets::ImageAssets>) {
     commands.spawn(PointLightBundle {
