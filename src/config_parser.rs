@@ -11,7 +11,8 @@ pub struct EngineConfig {
 }
 
 pub fn read_configs(mut commands: Commands) {
-    let f = std::fs::File::open("assets/configs/engine.yml").expect("Could not open file.");
+    let f = std::fs::File::open("assets/configs/engine.yml")
+        .expect("Could not open engine config file.");
     let engine_config: EngineConfig =
         serde_yaml::from_reader(f).expect("Could not read engine values.");
     commands.insert_resource(engine_config);
