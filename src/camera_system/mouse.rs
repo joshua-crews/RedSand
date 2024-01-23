@@ -96,7 +96,7 @@ fn planet_province_coordinates(
 
                 for province in provinces_query.iter() {
                     if province.color == [r, g, b] {
-                        //println!("Found Province with ID: {}", province.id);
+                        println!("Found Province with ID: {}", province.id);
                         break;
                     }
                 }

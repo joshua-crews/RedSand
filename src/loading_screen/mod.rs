@@ -233,10 +233,18 @@ fn loading_screen(mut commands: Commands) {
             "Loading...",
             TextStyle {
                 color: Color::WHITE,
+                font_size: 20.0,
                 ..default()
             },
         )
-        .with_text_alignment(TextAlignment::Center),
+        .with_style(
+            Style {
+                display: Display::Flex,
+                justify_self: JustifySelf::Center,
+                align_self: AlignSelf::Center,
+                ..Default::default()
+            }
+        ),
         LoadingScreenComponent,
     ));
 }

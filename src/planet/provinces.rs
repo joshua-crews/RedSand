@@ -1,4 +1,7 @@
-use image::{imageops, Rgb, RgbImage, Rgba, RgbaImage};
+use image::{
+    imageops::{self, blur},
+    Rgb, RgbImage, Rgba, RgbaImage,
+};
 use rand::prelude::*;
 
 use super::noise;
@@ -109,6 +112,9 @@ pub fn get_colors(images: &Vec<RgbImage>) -> Vec<Rgb<u8>> {
 
 pub fn get_border_images(dimensions: u32, images: &Vec<RgbImage>) -> Vec<RgbaImage> {
     let mut border_images: Vec<RgbaImage> = Vec::with_capacity(images.len());
+    let alpha = 180;
+    let sigma = 0.675;
+    let bloom_factor = 1.5;
     for image in images {
         let mut border_image: RgbaImage = RgbaImage::new(dimensions, dimensions);
         for x in 0..dimensions {
@@ -123,8 +129,17 @@ pub fn get_border_images(dimensions: u32, images: &Vec<RgbImage>) -> Vec<RgbaIma
                         }
                         let neighbor_color = *image.get_pixel(nx, ny);
                         if current_color != neighbor_color {
-                            *border_image.get_pixel_mut(x, y) = Rgba([0, 0, 0, 255]);
-                            break;
+                            // Applies a bloom effect to the border pixel
+                            // Maybe could be sped up using a frag shader but since it only affects load time
+                            // there shouldn't be a large performance hit
+                            let original_color = *image.get_pixel(x, y);
+                            let new_rgba = [
+                                (original_color[0] as f32 * bloom_factor).min(255.0) as u8,
+                                (original_color[1] as f32 * bloom_factor).min(255.0) as u8,
+                                (original_color[2] as f32 * bloom_factor).min(255.0) as u8,
+                                alpha,
+                            ];
+                            *border_image.get_pixel_mut(x, y) = Rgba(new_rgba);
                         }
                     }
                 }
@@ -132,5 +147,14 @@ pub fn get_border_images(dimensions: u32, images: &Vec<RgbImage>) -> Vec<RgbaIma
         }
         border_images.push(border_image);
     }
+
+    // perform a Gaussian blur on each border image to fix jagged lines
+    for border_image in &mut border_images {
+        *border_image = blur(border_image, sigma);
+    }
+
     return border_images;
 }
+
+
+
