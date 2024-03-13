@@ -6,8 +6,10 @@ use serde_yaml::{self};
 #[derive(Debug, Serialize, Deserialize, Resource)]
 pub struct EngineConfig {
     pub planet_lods: Vec<u32>,
+    pub planet_scale: u32,
     pub map_dimensions: u32,
     pub num_provinces: u32,
+    pub uv_scale: u32,
 }
 
 pub fn read_configs(mut commands: Commands) {

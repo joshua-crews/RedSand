@@ -14,7 +14,7 @@ use bevy::{
 use bevy_asset_loader::asset_collection::AssetCollection;
 use image::{DynamicImage, Rgb, RgbImage, RgbaImage};
 
-use crate::{camera_system, game_assets};
+use crate::{camera_system, config_parser, game_assets};
 
 mod noise;
 mod planet_material;
@@ -23,9 +23,17 @@ mod provinces;
 
 #[derive(Asset, AssetCollection, Resource, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PlanetMaterial {
-    #[texture(100)]
-    #[sampler(101)]
+    #[uniform(100)]
+    pub uv_scale: f32,
+    #[texture(101)]
+    #[sampler(102)]
     pub border_texture: Option<Handle<Image>>,
+    #[texture(103)]
+    #[sampler(104)]
+    pub base_texture: Option<Handle<Image>>,
+    #[texture(105)]
+    #[sampler(106)]
+    pub rock_texture: Option<Handle<Image>>,
 }
 
 #[derive(Resource, Debug)]
@@ -42,6 +50,7 @@ pub struct PlanetMesh {
     resolution: u32,
     size: f32,
     direction: Vec3,
+    uv_scale: f32,
     height_map: Image,
 }
 
@@ -94,6 +103,7 @@ pub fn setup(
     color_assets: Res<game_assets::ColorMapAssets>,
     normal_assets: Res<game_assets::NormalMapAssets>,
     asset_server: Res<AssetServer>,
+    engine_config: Res<config_parser::EngineConfig>,
 ) {
     let directions = [
         (Vec3::Y, "positive_y"),
@@ -105,25 +115,9 @@ pub fn setup(
     ];
 
     for (_direction, suffix) in directions {
-        let color_handle = match suffix {
-            "positive_y" => color_assets.positive_y.clone(),
-            "negative_y" => color_assets.negative_y.clone(),
-            "negative_x" => color_assets.negative_x.clone(),
-            "positive_x" => color_assets.positive_x.clone(),
-            "positive_z" => color_assets.positive_z.clone(),
-            "negative_z" => color_assets.negative_z.clone(),
-            _ => continue,
-        };
-
-        let normal_handle = match suffix {
-            "positive_y" => normal_assets.positive_y.clone(),
-            "negative_y" => normal_assets.negative_y.clone(),
-            "negative_x" => normal_assets.negative_x.clone(),
-            "positive_x" => normal_assets.positive_x.clone(),
-            "positive_z" => normal_assets.positive_z.clone(),
-            "negative_z" => normal_assets.negative_z.clone(),
-            _ => continue,
-        };
+        let color_handle = color_assets.muddy_sand.clone();
+        let rock_texture = color_assets.volcanic_rock.clone();
+        let normal_handle = normal_assets.muddy_sand.clone();
 
         let border_image = match suffix {
             "positive_y" => border_images.border_images[5].clone(),
@@ -155,13 +149,16 @@ pub fn setup(
                     mesh: pulled_lod,
                     material: planet_mats.add(ExtendedMaterial {
                         base: StandardMaterial {
-                            base_color_texture: Some(color_handle),
+                            base_color: Color::ORANGE_RED,
                             perceptual_roughness: 0.4,
                             normal_map_texture: Some(normal_handle),
                             ..Default::default()
                         },
                         extension: PlanetMaterial {
+                            uv_scale: engine_config.uv_scale as f32,
                             border_texture: Some(asset_server.add(converted_border_image)),
+                            base_texture: Some(color_handle),
+                            rock_texture: Some(rock_texture),
                         },
                     }),
                     ..default()
@@ -180,6 +177,12 @@ pub fn setup(
     }
 }
 
-pub fn spawn_face(direction: Vec3, height_map: &Image, resolution: u32) -> Mesh {
-    return planet_mesh::spawn_face(direction, height_map, resolution);
+pub fn spawn_face(
+    resolution: u32,
+    size: f32,
+    direction: Vec3,
+    uv_scale: f32,
+    height_map: &Image,
+) -> Mesh {
+    return planet_mesh::spawn_face(resolution, size, direction, uv_scale, height_map);
 }

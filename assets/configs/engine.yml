@@ -6,13 +6,20 @@
 planet_lods:
   - 10
   - 30
-  - 50
-  - 100
+    # - 50
+    # - 100
+
+# World space scale of the planet object. Higher scale means greater distance between vertices
+planet_scale: 1
 
 # The rendered texture dimensions for internal map handling
 # Each resolution added further slows app boot time but provides more fidelity
-map_dimensions: 300
+map_dimensions: 30
 
 # The maximum number of province instances to be generated
 # There is no promise the noise will allow all those points to be used however, so it is only a maximum
-num_provinces: 50
+num_provinces: 20
+
+# Number of times to reduce a texture mapped to a face of a planet in size
+# Bigger number means more times the texture is repeated, with 1 being the texture is used once on scale
+uv_scale: 2

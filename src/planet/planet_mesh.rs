@@ -8,11 +8,18 @@ use crate::planet;
 
 const HEIGHT_MAP_SCALE: f32 = 0.25;
 
-pub fn spawn_face(direction: Vec3, height_map: &Image, resolution: u32) -> Mesh {
+pub fn spawn_face(
+    resolution: u32,
+    size: f32,
+    direction: Vec3,
+    uv_scale: f32,
+    height_map: &Image,
+) -> Mesh {
     return Mesh::from(planet::PlanetMesh {
-        resolution: resolution,
-        size: 1.0,
-        direction: direction,
+        resolution,
+        size,
+        direction,
+        uv_scale,
         height_map: height_map.clone(),
     })
     .with_generated_tangents()
@@ -42,18 +49,21 @@ impl From<planet::PlanetMesh> for Mesh {
 
         let mut uvs: Vec<[f32; 2]> =
             Vec::with_capacity((planet.resolution * planet.resolution) as usize);
+        let mut height_uvs: Vec<[f32; 2]> =
+            Vec::with_capacity((planet.resolution * planet.resolution) as usize);
         for y in 0..planet.resolution {
             for x in 0..planet.resolution {
                 let u = x as f32 / (planet.resolution - 1) as f32;
                 let v = y as f32 / (planet.resolution - 1) as f32;
-                uvs.push([u, v]);
+                uvs.push([u * planet.uv_scale, v * planet.uv_scale]);
+                height_uvs.push([u, v]);
             }
         }
 
         let deformed_vertices = vertices
             .iter()
             .zip(vertices.iter())
-            .zip(uvs.iter())
+            .zip(height_uvs.iter())
             .map(|((&vertex, &normal), &uv)| {
                 deform_with_heightmap(
                     &vertex.into(),
@@ -71,7 +81,6 @@ impl From<planet::PlanetMesh> for Mesh {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, deformed_vertices.clone());
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals.clone());
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-
         return mesh;
     }
 }

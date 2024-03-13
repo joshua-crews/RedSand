@@ -114,14 +114,17 @@ fn setup_meshes(
             "negative_z" => &height_assets.negative_z,
             _ => continue,
         };
-        let height_handle_clone = height_handle.clone();
-        let height_map_clone = loaded_images.get(height_handle_clone).unwrap().clone();
-        let planet_lods = engine_config.planet_lods.clone();
+        let height_handle_clone: Handle<Image> = height_handle.clone();
+        let height_map_clone: Image = loaded_images.get(height_handle_clone).unwrap().clone();
+        let planet_lods: Vec<u32> = engine_config.planet_lods.clone();
+        let size: f32 = engine_config.planet_scale as f32;
+        let uv_scale: f32 = engine_config.uv_scale as f32;
 
         let task = thread_pool.spawn(async move {
             let mut faces: Vec<Mesh> = Vec::with_capacity(planet_lods.len() as usize);
             for res in planet_lods {
-                let planet_face = planet::spawn_face(direction, &height_map_clone, res);
+                let planet_face =
+                    planet::spawn_face(res, size, direction, uv_scale, &height_map_clone);
                 faces.push(planet_face);
             }
             return (direction, suffix.to_owned(), faces);

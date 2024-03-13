@@ -9,34 +9,18 @@ pub struct ImageAssets {
 
 #[derive(AssetCollection, Resource)]
 pub struct ColorMapAssets {
-    #[asset(path = "textures/mars/color/left.png")]
-    pub negative_x: Handle<Image>,
-    #[asset(path = "textures/mars/color/bottom.png")]
-    pub negative_y: Handle<Image>,
-    #[asset(path = "textures/mars/color/back.png")]
-    pub negative_z: Handle<Image>,
-    #[asset(path = "textures/mars/color/right.png")]
-    pub positive_x: Handle<Image>,
-    #[asset(path = "textures/mars/color/top.png")]
-    pub positive_y: Handle<Image>,
-    #[asset(path = "textures/mars/color/front.png")]
-    pub positive_z: Handle<Image>,
+    #[asset(path = "textures/surface/muddy_sand_albedo.png")]
+    pub muddy_sand: Handle<Image>,
+    #[asset(path = "textures/surface/volcanic_rock_albedo.png")]
+    pub volcanic_rock: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]
 pub struct NormalMapAssets {
-    #[asset(path = "textures/mars/normal/left.png")]
-    pub negative_x: Handle<Image>,
-    #[asset(path = "textures/mars/normal/bottom.png")]
-    pub negative_y: Handle<Image>,
-    #[asset(path = "textures/mars/normal/back.png")]
-    pub negative_z: Handle<Image>,
-    #[asset(path = "textures/mars/normal/right.png")]
-    pub positive_x: Handle<Image>,
-    #[asset(path = "textures/mars/normal/top.png")]
-    pub positive_y: Handle<Image>,
-    #[asset(path = "textures/mars/normal/front.png")]
-    pub positive_z: Handle<Image>,
+    #[asset(path = "textures/surface/muddy_sand_normal.png")]
+    pub muddy_sand: Handle<Image>,
+    #[asset(path = "textures/surface/volcanic_rock_normal.png")]
+    pub volcanic_rock: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]
